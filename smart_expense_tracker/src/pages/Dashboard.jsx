@@ -1,4 +1,6 @@
 import Card from "../components/card/Card";
+import CategoryBreakdown from "../components/categoryBreakdown/CategoryBreakdown";
+import Chart from "../components/chart/Chart";
 import ExpenseForm from "../features/expenses/ExpenseForm";
 import ExpenseList from "../features/expenses/ExpenseList";
 function Dashboard() {
@@ -29,6 +31,8 @@ function Dashboard() {
             </div>
             <ExpenseForm />
             <ExpenseList />
+            <Chart />
+            <CategoryBreakdown />
         </div>
     );
 }
