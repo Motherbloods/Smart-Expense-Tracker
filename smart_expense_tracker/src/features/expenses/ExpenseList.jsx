@@ -1,22 +1,17 @@
-import { useState } from "react";
-import expenses from "../../dummy/expenses";
+import usePagination from "../../hooks/usePagination.js"
 import { Edit, Trash2 } from "lucide-react";
 
-function ExpenseList() {
-    const itemsPerPage = 10;
-    const [currentPage, setCurrentPage] = useState(1);
-
-    const totalPages = Math.ceil(expenses.length / itemsPerPage);
-
-    const currentData = expenses.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
+function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
+    const { currentPage, totalPages, currentData, changePage } = usePagination(
+        expenses,
+        10,
+        (a, b) => new Date(b.date) - new Date(a.date)
     );
 
-    const changePage = (page) => {
-        if (page < 1 || page > totalPages) return;
-        setCurrentPage(page);
-    };
+    const handleEdit = (expense) => {
+        handleEditExpense(expense)
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     return (
         <>
@@ -47,7 +42,6 @@ function ExpenseList() {
                     <tbody className="bg-white divide-y divide-gray-200">
                         {currentData.length > 0 ? (
                             currentData
-                                .sort((a, b) => new Date(b.date) - new Date(a.date))
                                 .map((expense) => (
                                     <tr key={expense.id}>
                                         <td className="py-3 px-4 whitespace-nowrap">
@@ -65,10 +59,10 @@ function ExpenseList() {
                                             {expense.date}
                                         </td>
                                         <td className="py-3 px-4 whitespace-nowrap flex">
-                                            <button className="text-indigo-600 hover:text-indigo-900 mr-2 cursor-pointer">
+                                            <button onClick={() => handleEdit(expense)} className="text-indigo-600 hover:text-indigo-900 mr-2 cursor-pointer">
                                                 <Edit size={18} />
                                             </button>
-                                            <button className="text-red-600 hover:text-red-900 cursor-pointer">
+                                            <button onClick={() => onDeleteExpense(expense.id)} className="text-red-600 hover:text-red-900 cursor-pointer">
                                                 <Trash2 size={18} />
                                             </button>
                                         </td>

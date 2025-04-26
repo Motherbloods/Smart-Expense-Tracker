@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import expenses from "../../dummy/expenses";
-
-function Chart() {
+function Chart({ expenses }) {
     const [viewMode, setViewMode] = useState("daily");
     const [currentDate, setCurrentDate] = useState(new Date());
     const [chartData, setChartData] = useState([]);
@@ -111,7 +109,7 @@ function Chart() {
 
             setChartData(monthlyData);
         }
-    }, [viewMode, currentDate]);
+    }, [viewMode, currentDate, expenses]);
 
     const handleViewModeChange = (e) => {
         setViewMode(e.target.value);
