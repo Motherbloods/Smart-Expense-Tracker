@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const connectDB = require("./utils/db");
 const router = require("./routes/expense.route.js");
-const app = express(); // langsung buat di sini aja lebih clean
+const app = require("./utils/utils.js"); // langsung buat di sini aja lebih clean
 
 (async () => {
   try {

@@ -10,13 +10,6 @@ const getExpenses = async (req, res) => {
   try {
     const expenses = await getExpensesService();
 
-    if (expenses.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No expenses found.",
-      });
-    }
-
     return res.status(200).json({
       success: true,
       message: "Expenses retrieved successfully",
