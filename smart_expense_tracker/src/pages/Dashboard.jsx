@@ -1,20 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Card from "../components/card/Card";
 import CategoryBreakdown from "../components/categoryBreakdown/CategoryBreakdown";
 import Chart from "../components/chart/Chart";
 import ExpenseForm from "../features/expenses/ExpenseForm";
 import ExpenseList from "../features/expenses/ExpenseList";
 import BudgetModal from "../components/budgetModal/BudgetModal";
-import expensesData from "../dummy/expenses";
-import useLocalStorage from "../hooks/useLocalStorage";
+import { getExpenses } from "../api/expenseService";
+import { getUserData } from "../api/loginService";
 
 function Dashboard() {
     const [showBudgetModal, setShowBudgetModal] = useState(false);
-    const [monthlyBudget, setMonthlyBudget] = useLocalStorage("monthlyBudget", 0);
-    const [expenses, setExpenses] = useLocalStorage("expenses", expensesData);
+    const [monthlyBudget, setMonthlyBudget] = useState(0);
+    const [expenses, setExpenses] = useState([])
     const [expenseEdit, setExpenseEdit] = useState(null);
     console.log('ads', expenseEdit)
-
+    const telegramId = localStorage.getItem("telegramId");
     const totalExpenses = expenses.reduce(
         (sum, expense) => sum + Number(expense.amount),
         0
@@ -40,6 +40,24 @@ function Dashboard() {
     const handleEditExpense = (expense) => {
         setExpenseEdit(expense);
     };
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const expenseResponse = await getExpenses();
+                setExpenses(expenseResponse.data.data);
+
+                const userResponse = await getUserData(telegramId);
+                console.log("userResponse", userResponse.data.data);
+                setMonthlyBudget(userResponse.data.data.budgetMontly
+                );
+            } catch (error) {
+                console.error("Error fetching data", error);
+            }
+        };
+
+        fetchData();
+    }, [telegramId]);
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
@@ -85,6 +103,7 @@ function Dashboard() {
             <CategoryBreakdown expenses={expenses} />
             {showBudgetModal && (
                 <BudgetModal
+                    telegramId={telegramId}
                     setShowBudgetModal={setShowBudgetModal}
                     setMonthlyBudget={setMonthlyBudget}
                     monthlyBudget={monthlyBudget}

@@ -1,8 +1,20 @@
-function BudgetModal({ setShowBudgetModal, setMonthlyBudget, monthlyBudget }) {
+import { updateMonthlyBudget } from "../../api/loginService";
+
+function BudgetModal({ telegramId, setShowBudgetModal, setMonthlyBudget, monthlyBudget }) {
     const handleBudgetChange = (e) => {
         const numericValue = e.target.value.replace(/\D/g, '');
         setMonthlyBudget(numericValue ? parseInt(numericValue) : 0);
     };
+
+    const handleSaveBudget = async () => {
+        try {
+            await updateMonthlyBudget(monthlyBudget, telegramId);
+            setShowBudgetModal(false);
+            alert("Budget updated successfully!");
+        } catch (e) {
+            console.error("Error saving budget", e);
+        }
+    }
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -26,7 +38,7 @@ function BudgetModal({ setShowBudgetModal, setMonthlyBudget, monthlyBudget }) {
                         Batal
                     </button>
                     <button
-                        onClick={() => setShowBudgetModal(false)}
+                        onClick={handleSaveBudget}
                         className="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 cursor-pointer"
                     >
                         Simpan
