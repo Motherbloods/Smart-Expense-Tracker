@@ -9,7 +9,6 @@ const { handleErrorResponse } = require("../utils/errorHelper");
 const getExpenses = async (req, res) => {
   try {
     const expenses = await getExpensesService();
-
     return res.status(200).json({
       success: true,
       message: "Expenses retrieved successfully",
@@ -23,7 +22,10 @@ const getExpenses = async (req, res) => {
 
 const createExpense = async (req, res) => {
   try {
-    const newExpense = await createExpenseService(req.body, req.user._id);
+    const newExpense = await createExpenseService(
+      req.body,
+      req.user.telegramId
+    );
     return res.status(201).json({
       success: true,
       message: "Expense created successfully",
@@ -40,7 +42,7 @@ const editExpense = async (req, res) => {
     const updatedExpense = await editExpenseService(
       req.body,
       req.params.id,
-      req.user._id
+      req.user.telegramId
     );
     return res.status(200).json({
       success: true,
@@ -57,7 +59,7 @@ const deleteExpense = async (req, res) => {
   try {
     const deletedExpense = await deleteExpenseService(
       req.params.id,
-      req.user._id
+      req.user.telegramId
     );
     return res.status(200).json({
       success: true,

@@ -9,6 +9,7 @@ const getExpensesService = async () => {
 };
 const createExpenseService = async (data, userId) => {
   const { name, amount, category, date } = data;
+  console.log("data", date);
 
   if (!name || !amount || !category || !date) {
     return res.status(400).json({
@@ -35,6 +36,7 @@ const createExpenseService = async (data, userId) => {
 };
 const editExpenseService = async (data, expenseId, userId) => {
   const { name, amount, category, date } = data;
+  console.log("Editing expense with ID:", data, "for user:", userId);
   const expense = await ExpenseTracker.findById(expenseId);
 
   if (!expense) {
