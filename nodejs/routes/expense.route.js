@@ -12,13 +12,15 @@ const {
   getUserData,
 } = require("../controllers/user.controller");
 const { getTelegramIdHook } = require("../controllers/telegram.controller");
-router.get("/expenses", getExpenses);
-router.post("/create", createExpense);
-router.put("/:id", editExpense);
-router.delete("/:id", deleteExpense);
+const authMiddleware = require("../middleware/auth.middleware");
+
+router.get("/expenses", authMiddleware, getExpenses);
+router.post("/create", authMiddleware, createExpense);
+router.put("/:id", authMiddleware, editExpense);
+router.delete("/:id", authMiddleware, deleteExpense);
 router.post("/login", loginToDashboard);
 router.post("/webhook", getTelegramIdHook);
-router.patch("/update-budget", updateMonthlyBudget);
-router.get("/getUser/:telegramId", getUserData);
+router.patch("/update-budget", authMiddleware, updateMonthlyBudget);
+router.get("/getUser/:telegramId", authMiddleware, getUserData);
 
 module.exports = router;
