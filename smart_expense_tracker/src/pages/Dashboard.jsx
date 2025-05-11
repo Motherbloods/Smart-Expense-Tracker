@@ -104,13 +104,13 @@ function Dashboard() {
     }, [telegramId]);
 
     useEffect(() => {
-        const pusher = new Pusher('1d3d59fbfc0171ca6444', {
-            cluster: 'ap1',
+        const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
+            cluster: import.meta.env.VITE_PUSHER_CLUSTER,
         });
 
-        const channel = pusher.subscribe('expenses');
+        const channel = pusher.subscribe(import.meta.env.VITE_PUSHER_SUBSCRIBE);
 
-        channel.bind('new-expense', (data) => {
+        channel.bind(import.meta.env.VITE_PUSHER_BIND, (data) => {
 
             if (data && data.expense && data.telegramId === telegramId) {
                 console.log('Expense data:', data.expense);
