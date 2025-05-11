@@ -66,19 +66,10 @@ const editExpenseService = async (data, expenseId, userId) => {
   );
 };
 const deleteExpenseService = async (expenseId, userId) => {
-  const expense = await ExpenseTracker.findById(expenseId);
+  console.log("Deleting expense with ID:", expenseId, "for user:", userId);
+  const expense = await ExpenseTracker.findOne({ _id: expenseId, userId });
   if (!expense) {
-    return res.status(404).json({
-      success: false,
-      message: "Expense not found",
-    });
-  }
-
-  if (expense.userId.toString() !== userId.toString()) {
-    return res.status(403).json({
-      success: false,
-      message: "You are not authorized to delete this expense.",
-    });
+    throw new Error("Expense not found or you're not authorized to delete it.");
   }
 
   return await ExpenseTracker.findByIdAndDelete(expenseId);

@@ -46,7 +46,6 @@ function Dashboard() {
         try {
             setIsLoading(true);
             const { id, ...expenseData } = updatedExpense;
-            console.log("expenseData", updatedExpense);
             const response = await editExpense(expenseData, id);
 
             if (response.data && response.data.data) {

@@ -4,7 +4,6 @@ import axiosInstance from "./axiosInstance"; // pastikan import path-nya sesuai
 export const loginToDashboard = async (telegramId) => {
   try {
     const response = await axiosInstance.post("/login", { telegramId });
-    console.log(response);
     return response.data;
   } catch (error) {
     console.error(error);
@@ -18,7 +17,6 @@ export const updateMonthlyBudget = async (budget, telegramId) => {
       telegramId,
       budget,
     });
-    console.log(response);
     return response.data;
   } catch (error) {
     console.error(error);

@@ -13,8 +13,17 @@ const saveCorrectionsToFile = (corrections) => {
   // Baca data lama jika ada
   let existingCorrections = [];
   if (fs.existsSync(filePath)) {
-    const fileData = fs.readFileSync(filePath, "utf8");
-    existingCorrections = JSON.parse(fileData);
+    const fileData = fs.readFileSync(filePath, "utf8").trim();
+    if (fileData) {
+      try {
+        existingCorrections = JSON.parse(fileData);
+      } catch (err) {
+        console.warn(
+          "⚠️ Failed to parse corrections.json. Replacing with empty array."
+        );
+        existingCorrections = [];
+      }
+    }
   }
 
   // Gabungkan koreksi baru dengan yang lama

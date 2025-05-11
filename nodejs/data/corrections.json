@@ -1,0 +1,12 @@
+[
+    {
+        "originalActivity": "jajan cilok 10k",
+        "correctedCategory": "makanan",
+        "correctedAt": "2025-05-11T12:02:03.533Z"
+    },
+    {
+        "originalActivity": "bayar parkir 2k",
+        "correctedCategory": "transportasi",
+        "correctedAt": "2025-05-11T12:02:03.601Z"
+    }
+]

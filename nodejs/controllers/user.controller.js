@@ -34,7 +34,6 @@ const getUserData = async (req, res) => {
 
 const updateMonthlyBudget = async (req, res) => {
   const { telegramId, budget } = req.body;
-  console.log("telegramId:", telegramId, "budget:", budget);
 
   if (!telegramId || !budget) {
     return res.status(400).json({
@@ -63,7 +62,6 @@ const updateMonthlyBudget = async (req, res) => {
       { new: true }
     );
     await updatedUser.save();
-    console.log("updatedUser:", updatedUser);
     return res.status(200).json({
       success: true,
       message: "Budget updated successfully",
