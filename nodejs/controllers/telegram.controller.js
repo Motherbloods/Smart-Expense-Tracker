@@ -1,6 +1,11 @@
 const UserExpenseTracker = require("../models/user");
+const {
+  createExpenseService,
+  getExpensesService,
+} = require("../services/expense.service");
 const TELEGRAM_API = `${process.env.TELEGRAM_API}${process.env.TOKEN}`;
 const axios = require("axios");
+const capitalizeWords = require("../utils/capitalizeWords.js");
 const saveCorrectionsToFile = require("../utils/correctionstojson");
 
 const sessionCache = new Map();
@@ -38,8 +43,8 @@ const getTelegramIdHook = async (req, res) => {
     const telegramId = message.from.id;
     const inputText = message.text.trim();
 
-    // Check if this is a category correction from user
     const userSession = sessionCache.get(telegramId);
+    // Handle Corrections Single and Batch Expenses
     if (userSession && userSession.awaitingCorrection) {
       // Special commands to cancel or finish the correction
       if (
@@ -128,19 +133,66 @@ const getTelegramIdHook = async (req, res) => {
           }
 
           try {
-            // Save the expense with the corrected category
-            await UserExpenseTracker.findOneAndUpdate(
-              { telegramId },
-              {
-                $push: {
-                  expenses: {
-                    description: expense.activity,
-                    category: category,
-                  },
-                },
-              }
+            // Extract amount if present in the activity
+            const amountMatch = expense.activity.match(
+              /(\d{1,3}(?:[\.,]?\d{3})*(?:[\.,]?\d+)?|\d+[.,]?\d*\s*(rb|k|K|ribu|jt|juta|m|M|juta rupiah)?)/i
             );
-            console.log(successfulCorrections);
+
+            let amount = 0;
+            console.log("amountMatch", amountMatch);
+            if (amountMatch) {
+              // Mengambil bagian angka dari match
+              let amountStr = amountMatch[0]
+                .replace(/\./g, "")
+                .replace(/,/g, ".");
+              console.log("amountStr", amountStr);
+
+              // Menangani k/ribu (ribu atau ribu diidentifikasi sebagai ribu di Indonesia)
+              if (/k|K|ribu/i.test(inputText)) {
+                const numPart = amountStr.replace(/k|K|ribu/gi, "").trim();
+                amount = parseFloat(numPart) * 1000;
+              }
+              // Menangani jt/juta
+              else if (/jt|juta/i.test(inputText)) {
+                const numPart = amountStr.replace(/jt|juta/gi, "").trim();
+                amount = parseFloat(numPart) * 1000000;
+              }
+              // Menangani m (miliar)
+              else if (/m|M/i.test(inputText)) {
+                const numPart = amountStr.replace(/m|M/gi, "").trim();
+                amount = parseFloat(numPart) * 1000000;
+              }
+              // Angka biasa (tidak ada singkatan)
+              else {
+                amount = parseFloat(amountStr);
+              }
+            }
+            // Clean description
+            const description = expense.activity
+              .replace(
+                /(\s*Rp\.?\s*\d{1,3}(?:[\.,]?\d{3})*(?:[\.,]?\d+)?|\s*\d+[.,]?\d*\s*(rb|k|K|ribu|jt|juta|m|M|juta rupiah)?)/gi,
+                ""
+              )
+              .trim();
+
+            // Format category with capitalized first letter
+            const formattedCategory =
+              category.charAt(0).toUpperCase() +
+              category.slice(1).toLowerCase();
+
+            const formattedDescription = capitalizeWords(description);
+
+            // Use the service function to create expense
+            await createExpenseService(
+              {
+                name: formattedDescription,
+                amount: amount || 0,
+                category: formattedCategory,
+                date: new Date(),
+              },
+              telegramId
+            );
+
             successfulCorrections.push({
               index,
               activity: expense.activity,
@@ -180,7 +232,11 @@ const getTelegramIdHook = async (req, res) => {
         if (successfulCorrections.length > 0) {
           replyText += "✅ Berhasil menyimpan:\n";
           successfulCorrections.forEach((item) => {
-            replyText += `- ${item.index}. "${item.activity}" sebagai "${item.category}"\n`;
+            // Format the category for display
+            const formattedCategory =
+              item.category.charAt(0).toUpperCase() +
+              item.category.slice(1).toLowerCase();
+            replyText += `- ${item.index}. "${item.activity}" sebagai "${formattedCategory}"\n`;
           });
         }
 
@@ -216,16 +272,13 @@ const getTelegramIdHook = async (req, res) => {
 
         return res.status(200).send("OK");
       } else {
-        // Handle single item correction (existing code)
-        // Check if input looks like a valid category (simple validation)
+        // Handle single item correction
         if (
           inputText.length > 25 ||
           inputText.includes("http") ||
           /^[0-9]+$/.test(inputText) || // only numbers
           inputText.split(" ").length > 3
         ) {
-          // too many words
-
           await axios.post(`${TELEGRAM_API}/sendMessage`, {
             chat_id: telegramId,
             text: `⚠️ Input "${inputText}" tidak terlihat seperti kategori yang valid.\n\nMohon masukkan kategori pengeluaran yang sederhana (contoh: "Makanan", "Transportasi", "Hiburan").\n\nAtau ketik "/batal" untuk membatalkan.`,
@@ -236,23 +289,71 @@ const getTelegramIdHook = async (req, res) => {
         }
 
         try {
-          // Save the expense with the corrected category
-          await UserExpenseTracker.findOneAndUpdate(
-            { telegramId },
-            {
-              $push: {
-                expenses: {
-                  description: userSession.activity,
-                  category: inputText, // Use the user-provided category
-                },
-              },
+          // Extract amount if present in the activity
+          const amountMatch = userSession.activity.match(
+            /(\d{1,3}(?:[\.,]?\d{3})*(?:[\.,]?\d+)?|\d+[.,]?\d*\s*(rb|k|K|ribu|jt|juta|m|M|juta rupiah)?)/i
+          );
+
+          let amount = 0;
+          console.log("amountMatch", amountMatch);
+          if (amountMatch) {
+            // Mengambil bagian angka dari match
+            let amountStr = amountMatch[0]
+              .replace(/\./g, "")
+              .replace(/,/g, ".");
+            console.log("amountStr", amountStr);
+
+            // Menangani k/ribu (ribu atau ribu diidentifikasi sebagai ribu di Indonesia)
+            if (/k|K|ribu/i.test(inputText)) {
+              const numPart = amountStr.replace(/k|K|ribu/gi, "").trim();
+              amount = parseFloat(numPart) * 1000;
             }
+            // Menangani jt/juta
+            else if (/jt|juta/i.test(inputText)) {
+              const numPart = amountStr.replace(/jt|juta/gi, "").trim();
+              amount = parseFloat(numPart) * 1000000;
+            }
+            // Menangani m (miliar)
+            else if (/m|M/i.test(inputText)) {
+              const numPart = amountStr.replace(/m|M/gi, "").trim();
+              amount = parseFloat(numPart) * 1000000;
+            }
+            // Angka biasa (tidak ada singkatan)
+            else {
+              amount = parseFloat(amountStr);
+            }
+          }
+
+          // Clean description
+          const description = userSession.activity
+            .replace(
+              /(\s*Rp\.?\s*\d{1,3}(?:[\.,]?\d{3})*(?:[\.,]?\d+)?|\s*\d+[.,]?\d*\s*(rb|k|K|ribu|jt|juta|m|M|juta rupiah)?)/gi,
+              ""
+            )
+            .trim();
+
+          // Format category with capitalized first letter
+          const formattedCategory =
+            inputText.charAt(0).toUpperCase() +
+            inputText.slice(1).toLowerCase();
+
+          const formattedDescription = capitalizeWords(description);
+
+          // Use the service function to create expense
+          await createExpenseService(
+            {
+              name: formattedDescription,
+              amount: amount || 0,
+              category: formattedCategory,
+              date: new Date(),
+            },
+            telegramId
           );
 
           // Confirm to the user
           await axios.post(`${TELEGRAM_API}/sendMessage`, {
             chat_id: telegramId,
-            text: `✅ Terima kasih! Pengeluaran "${userSession.activity}" telah disimpan dengan kategori "${inputText}".`,
+            text: `✅ Terima kasih! Pengeluaran "${userSession.activity}" telah disimpan dengan kategori "${formattedCategory}".`,
           });
 
           // Clear the session
@@ -268,6 +369,7 @@ const getTelegramIdHook = async (req, res) => {
 
     const hasCommas = inputText.includes(",");
     const hasNewlines = inputText.includes("\n");
+    // Handle Batch Expense
     if (hasCommas || hasNewlines) {
       // Handle multiple expenses with batch prediction
       let activities = hasCommas
@@ -279,14 +381,6 @@ const getTelegramIdHook = async (req, res) => {
             .split("\n")
             .map((item) => item.trim())
             .filter((item) => item.length > 0);
-      activities = activities.map((item) => {
-        return item
-          .replace(
-            /(\s*Rp\.?\s*\d{1,3}(?:[\.,]?\d{3})*(?:[\.,]?\d+)?|\s*\d+[.,]?\d*\s*(rb|k|K|ribu|jt|juta|m|M|juta rupiah)?)/gi,
-            ""
-          )
-          .trim();
-      });
 
       if (activities.length > 1) {
         try {
@@ -311,10 +405,62 @@ const getTelegramIdHook = async (req, res) => {
                 confidence * 100
               ).toFixed(2)}%\n\n`;
 
+              // Extract amount if present in the activity
+              const amountMatch = activity.match(
+                /(\d{1,3}(?:[\.,]?\d{3})*(?:[\.,]?\d+)?|\d+[.,]?\d*\s*(rb|k|K|ribu|jt|juta|m|M|juta rupiah)?)/i
+              );
+
+              let amount = 0;
+              console.log("amountMatch", amountMatch);
+              if (amountMatch) {
+                // Mengambil bagian angka dari match
+                let amountStr = amountMatch[0]
+                  .replace(/\./g, "")
+                  .replace(/,/g, ".");
+                console.log("amountStr", amountStr);
+
+                // Menangani k/ribu (ribu atau ribu diidentifikasi sebagai ribu di Indonesia)
+                if (/k|K|ribu/i.test(inputText)) {
+                  const numPart = amountStr.replace(/k|K|ribu/gi, "").trim();
+                  amount = parseFloat(numPart) * 1000;
+                }
+                // Menangani jt/juta
+                else if (/jt|juta/i.test(inputText)) {
+                  const numPart = amountStr.replace(/jt|juta/gi, "").trim();
+                  amount = parseFloat(numPart) * 1000000;
+                }
+                // Menangani m (miliar)
+                else if (/m|M/i.test(inputText)) {
+                  const numPart = amountStr.replace(/m|M/gi, "").trim();
+                  amount = parseFloat(numPart) * 1000000;
+                }
+                // Angka biasa (tidak ada singkatan)
+                else {
+                  amount = parseFloat(amountStr);
+                }
+              }
+
+              // Clean description
+              const description = activity
+                .replace(
+                  /(\s*Rp\.?\s*\d{1,3}(?:[\.,]?\d{3})*(?:[\.,]?\d+)?|\s*\d+[.,]?\d*\s*(rb|k|K|ribu|jt|juta|m|M|juta rupiah)?)/gi,
+                  ""
+                )
+                .trim();
+
+              // Format category with capitalized first letter
+              const formattedCategory =
+                category.charAt(0).toUpperCase() +
+                category.slice(1).toLowerCase();
+
+              const formattedDescription = capitalizeWords(description);
+
               // Store recognized expenses for database
               recognizedExpenses.push({
-                description: activity,
-                category: category,
+                name: formattedDescription,
+                amount: amount || 0,
+                category: formattedCategory,
+                date: new Date(),
               });
             } else {
               replyText += `${
@@ -333,10 +479,9 @@ const getTelegramIdHook = async (req, res) => {
           // Save recognized expenses to the database
           if (recognizedExpenses.length > 0) {
             try {
-              await UserExpenseTracker.findOneAndUpdate(
-                { telegramId },
-                { $push: { expenses: { $each: recognizedExpenses } } }
-              );
+              for (const expenseData of recognizedExpenses) {
+                await createExpenseService(expenseData, telegramId);
+              }
             } catch (dbError) {
               console.error(
                 "Error saving batch expenses to database:",
@@ -387,16 +532,56 @@ const getTelegramIdHook = async (req, res) => {
         }
       }
     }
-    const cleanedActivity = inputText
-      .replace(/(\s+Rp\.?\s*\d+[.,]?\d*|\s+\d+[.,]?\d*\s*[Kk]?)/g, "")
-      .trim();
 
+    // Handle single expense
     try {
+      const cleanedActivity = inputText
+        .replace(
+          /(\s*Rp\.?\s*\d{1,3}(?:[\.,]?\d{3})*(?:[\.,]?\d+)?|\s*\d+[.,]?\d*\s*(rb|k|K|ribu|jt|juta|m|M|juta rupiah)?)/gi,
+          ""
+        )
+        .trim();
+
       const response = await axios.post(`${FLASK_API_URL}/predict`, {
         activity: cleanedActivity,
       });
 
       const { category, confidence, recognized } = response.data;
+
+      // Extract amount if present in the activity
+      const amountMatch = inputText.match(
+        /(\d{1,3}(?:[\.,]?\d{3})*(?:[\.,]?\d+)?|\d+[.,]?\d*\s*(rb|k|K|ribu|jt|juta|m|M|juta rupiah)?)/i
+      );
+
+      let amount = 0;
+      console.log("amountMatch", amountMatch);
+      if (amountMatch) {
+        // Mengambil bagian angka dari match
+        let amountStr = amountMatch[0].replace(/\./g, "").replace(/,/g, ".");
+        console.log("amountStr", amountStr);
+
+        // Menangani k/ribu (ribu atau ribu diidentifikasi sebagai ribu di Indonesia)
+        if (/k|K|ribu/i.test(inputText)) {
+          const numPart = amountStr.replace(/k|K|ribu/gi, "").trim();
+          amount = parseFloat(numPart) * 1000;
+        }
+        // Menangani jt/juta
+        else if (/jt|juta/i.test(inputText)) {
+          const numPart = amountStr.replace(/jt|juta/gi, "").trim();
+          amount = parseFloat(numPart) * 1000000;
+        }
+        // Menangani m (miliar)
+        else if (/m|M/i.test(inputText)) {
+          const numPart = amountStr.replace(/m|M/gi, "").trim();
+          amount = parseFloat(numPart) * 1000000;
+        }
+        // Angka biasa (tidak ada singkatan)
+        else {
+          amount = parseFloat(amountStr);
+        }
+      }
+
+      console.log("Amount final:", amount);
 
       let replyText;
       if (recognized) {
@@ -405,9 +590,19 @@ const getTelegramIdHook = async (req, res) => {
         ).toFixed(2)}%`;
 
         try {
-          await UserExpenseTracker.findOneAndUpdate(
-            { telegramId },
-            { $push: { expenses: { description: cleanedActivity, category } } }
+          // Format category with capitalized first letter
+          const formattedCategory =
+            category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+          const formattedDescription = capitalizeWords(cleanedActivity);
+
+          await createExpenseService(
+            {
+              name: formattedDescription,
+              amount: amount || 0,
+              category: formattedCategory,
+              date: new Date(),
+            },
+            telegramId
           );
         } catch (dbError) {
           console.error("Error saving expense to database:", dbError);
@@ -421,7 +616,7 @@ const getTelegramIdHook = async (req, res) => {
 
         // Store this prediction in sessionCache for potential correction
         sessionCache.set(telegramId, {
-          activity: cleanedActivity,
+          activity: inputText,
           prediction: category,
           awaitingCorrection: true,
         });
