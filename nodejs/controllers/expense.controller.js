@@ -56,7 +56,6 @@ const editExpense = async (req, res) => {
 };
 
 const deleteExpense = async (req, res) => {
-  console.log("deletedExpense", req.user);
   try {
     const deletedExpense = await deleteExpenseService(
       req.params.id,

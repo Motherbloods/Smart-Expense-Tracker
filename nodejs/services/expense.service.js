@@ -9,7 +9,6 @@ const getExpensesService = async () => {
 };
 const createExpenseService = async (data, userId) => {
   const { name, amount, category, date } = data;
-  console.log("data", date);
 
   if (!name || !amount || !category || !date) {
     return res.status(400).json({
@@ -36,7 +35,6 @@ const createExpenseService = async (data, userId) => {
 };
 const editExpenseService = async (data, expenseId, userId) => {
   const { name, amount, category, date } = data;
-  console.log("Editing expense with ID:", data, "for user:", userId);
   const expense = await ExpenseTracker.findById(expenseId);
 
   if (!expense) {
@@ -66,7 +64,6 @@ const editExpenseService = async (data, expenseId, userId) => {
   );
 };
 const deleteExpenseService = async (expenseId, userId) => {
-  console.log("Deleting expense with ID:", expenseId, "for user:", userId);
   const expense = await ExpenseTracker.findOne({ _id: expenseId, userId });
   if (!expense) {
     throw new Error("Expense not found or you're not authorized to delete it.");
