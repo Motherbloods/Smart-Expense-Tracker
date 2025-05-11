@@ -3,10 +3,11 @@ const { handleBatchExpenses } = require("../helper/batch-expense.handler.js");
 const sessionCache = require("../utils/session-cache.js");
 const { handleCorrection } = require("../helper/correction.handler.js");
 const { handleSingleExpense } = require("../helper/single-expense.handler.js");
+const pusher = require("../utils/pusher");
 
 const getTelegramIdHook = async (req, res) => {
   const { message } = req.body;
-  const telegramId = message?.from?.id;
+  const telegramId = String(message?.from?.id);
   const inputText = message?.text?.trim();
 
   if (

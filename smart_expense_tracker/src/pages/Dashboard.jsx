@@ -7,6 +7,7 @@ import ExpenseList from "../features/expenses/ExpenseList";
 import BudgetModal from "../components/budgetModal/BudgetModal";
 import { createExpense, deleteExpense, editExpense, getExpenses } from "../api/expenseService";
 import { getUserData } from "../api/loginService";
+import Pusher from 'pusher-js';
 
 function Dashboard() {
     const [showBudgetModal, setShowBudgetModal] = useState(false);
@@ -100,6 +101,44 @@ function Dashboard() {
         };
 
         fetchData();
+    }, [telegramId]);
+
+    useEffect(() => {
+        const pusher = new Pusher('1d3d59fbfc0171ca6444', {
+            cluster: 'ap1',
+        });
+
+        const channel = pusher.subscribe('expenses');
+
+        channel.bind('new-expense', (data) => {
+
+            if (data && data.expense && data.telegramId === telegramId) {
+                console.log('Expense data:', data.expense);
+                const newExpense = {
+                    _id: data.expense._id || `temp-${Date.now()}`,
+                    name: data.expense.name,
+                    amount: data.expense.amount,
+                    category: data.expense.category,
+                    date: data.expense.date,
+                    telegramId: data.telegramId
+                };
+
+                // Avoid duplicate entries by checking if expense with same ID already exists
+                setExpenses(prev => {
+                    // Check if expense already exists in the array
+                    const exists = prev.some(exp => exp._id === newExpense._id);
+                    if (!exists) {
+                        return [newExpense, ...prev];
+                    }
+                    return prev;
+                });
+            }
+        });
+
+        return () => {
+            channel.unbind_all();
+            channel.unsubscribe();
+        };
     }, [telegramId]);
 
     return (

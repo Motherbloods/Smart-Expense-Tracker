@@ -7,6 +7,7 @@ const {
   cleanDescription,
 } = require("../utils/text-formatter");
 const { predictBatchCategories } = require("../services/classifier.service");
+const pusher = require("../utils/pusher");
 
 const handleBatchExpenses = async (telegramId, inputText, res) => {
   const hasCommas = inputText.includes(",");
@@ -75,6 +76,15 @@ const handleBatchExpenses = async (telegramId, inputText, res) => {
         for (const expenseData of recognizedExpenses) {
           await createExpenseService(expenseData, telegramId);
         }
+        pusher.trigger("expenses", "new-expense", {
+          telegramId,
+          expense: {
+            name: formattedDescription,
+            amount,
+            category: formattedCategory,
+            date: new Date(),
+          },
+        });
       } catch (dbError) {
         console.error("Error saving batch expenses to database:", dbError);
       }

@@ -1,6 +1,12 @@
+const { createExpenseService } = require("../services/expense.service");
 const { sendMessage } = require("../services/telegram.service");
+const pusher = require("../utils/pusher");
 const sessionCache = require("../utils/session-cache");
-const { extractAmount } = require("../utils/text-formatter");
+const {
+  extractAmount,
+  cleanDescription,
+  capitalizeWords,
+} = require("../utils/text-formatter");
 
 const handleSingleCorrection = async (
   telegramId,
@@ -39,6 +45,16 @@ const handleSingleCorrection = async (
       },
       telegramId
     );
+    pusher.trigger("expenses", "new-expense", {
+      telegramId,
+      expense: {
+        name: formattedDescription,
+        amount,
+        category: formattedCategory,
+        date: new Date(),
+      },
+    });
+
     await sendMessage(
       telegramId,
       `✅ Terima kasih! Pengeluaran "${userSession.activity}" telah disimpan dengan kategori "${formattedCategory}".`

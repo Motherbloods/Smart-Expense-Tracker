@@ -1,6 +1,7 @@
 const { predictCategory } = require("../services/classifier.service");
 const { createExpenseService } = require("../services/expense.service");
 const { sendMessage } = require("../services/telegram.service");
+const pusher = require("../utils/pusher");
 const sessionCache = require("../utils/session-cache");
 const {
   capitalizeWords,
@@ -40,6 +41,15 @@ const handleSingleExpense = async (telegramId, inputText, res) => {
           },
           telegramId
         );
+        pusher.trigger("expenses", "new-expense", {
+          telegramId,
+          expense: {
+            name: formattedDescription,
+            amount,
+            category: formattedCategory,
+            date: new Date(),
+          },
+        });
       } catch (dbError) {
         console.error("Error saving expense to database:", dbError);
       }

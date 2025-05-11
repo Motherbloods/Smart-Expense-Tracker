@@ -16,7 +16,7 @@ const loginToDashboard = async (req, res) => {
     const existingUser = await UserExpenseTracker.findOne({
       telegramId: telegramId.trim(),
     });
-    
+
     if (!existingUser) {
       return res.status(404).json({
         success: false,

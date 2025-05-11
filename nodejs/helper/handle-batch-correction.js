@@ -7,6 +7,7 @@ const {
 } = require("../utils/text-formatter");
 const saveCorrectionsToFile = require("../helper/correctionstojson.handler");
 const { createExpenseService } = require("../services/expense.service");
+const pusher = require("../utils/pusher");
 const handleBatchCorrection = async (
   telegramId,
   inputText,
@@ -92,6 +93,16 @@ const handleBatchCorrection = async (
         },
         telegramId
       );
+
+      pusher.trigger("expenses", "new-expense", {
+        telegramId,
+        expense: {
+          name: formattedDescription,
+          amount,
+          category: formattedCategory,
+          date: new Date(),
+        },
+      });
 
       successfulCorrections.push({
         index,
