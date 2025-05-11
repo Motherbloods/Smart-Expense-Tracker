@@ -1,7 +1,7 @@
 const UserExpenseTracker = require("../models/user.js");
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
-const { handleErrorResponse } = require("../utils/errorHelper.js");
+const { handleErrorResponse } = require("../helper/errorHelper.handler.js");
 
 const loginToDashboard = async (req, res) => {
   const { telegramId } = req.body;

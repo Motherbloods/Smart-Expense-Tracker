@@ -4,7 +4,7 @@ const {
   deleteExpenseService,
   getExpensesService,
 } = require("../services/expense.service");
-const { handleErrorResponse } = require("../utils/errorHelper");
+const { handleErrorResponse } = require("../helper/errorHelper.handler");
 
 const getExpenses = async (req, res) => {
   try {
