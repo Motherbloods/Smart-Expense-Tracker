@@ -1,16 +1,9 @@
-import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL;
+// ✅ GUNAKAN axiosInstance
+import axiosInstance from "./axiosInstance"; // pastikan import path-nya sesuai
 
 export const loginToDashboard = async (telegramId) => {
   try {
-    const response = await axios.post(
-      `${API_URL}/login`,
-      {
-        telegramId: telegramId,
-      },
-      { withCredentials: true }
-    );
+    const response = await axiosInstance.post("/login", { telegramId });
     console.log(response);
     return response.data;
   } catch (error) {
@@ -21,14 +14,10 @@ export const loginToDashboard = async (telegramId) => {
 
 export const updateMonthlyBudget = async (budget, telegramId) => {
   try {
-    const response = await axios.patch(
-      `${API_URL}/update-budget`,
-      {
-        telegramId: telegramId,
-        budget: budget,
-      },
-      { withCredentials: true }
-    );
+    const response = await axiosInstance.patch("/update-budget", {
+      telegramId,
+      budget,
+    });
     console.log(response);
     return response.data;
   } catch (error) {
@@ -38,5 +27,5 @@ export const updateMonthlyBudget = async (budget, telegramId) => {
 };
 
 export const getUserData = (telegramId) => {
-  return axios.get(`${API_URL}/getUser/${telegramId}`);
+  return axiosInstance.get(`/getUser/${telegramId}`);
 };

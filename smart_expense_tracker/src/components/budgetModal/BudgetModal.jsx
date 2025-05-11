@@ -1,6 +1,6 @@
 import { updateMonthlyBudget } from "../../api/loginService";
 
-function BudgetModal({ telegramId, setShowBudgetModal, setMonthlyBudget, monthlyBudget }) {
+function BudgetModal({ telegramId, setShowBudgetModal, setMonthlyBudget, monthlyBudget, originalMonthlyBudget }) {
     const handleBudgetChange = (e) => {
         const numericValue = e.target.value.replace(/\D/g, '');
         setMonthlyBudget(numericValue ? parseInt(numericValue) : 0);
@@ -32,7 +32,7 @@ function BudgetModal({ telegramId, setShowBudgetModal, setMonthlyBudget, monthly
                 </div>
                 <div className="flex justify-end space-x-2">
                     <button
-                        onClick={() => setShowBudgetModal(false)}
+                        onClick={() => { setMonthlyBudget(originalMonthlyBudget); setShowBudgetModal(false) }}
                         className="py-2 px-4 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 cursor-pointer"
                     >
                         Batal

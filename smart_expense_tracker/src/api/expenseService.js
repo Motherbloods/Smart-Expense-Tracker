@@ -1,18 +1,4 @@
-import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL;
-
-const axiosInstance = axios.create({
-  baseURL: API_URL,
-});
-
-axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+import axiosInstance from "./axiosInstance";
 
 export const getExpenses = async () => {
   return await axiosInstance.get("/expenses");
@@ -29,3 +15,5 @@ export const editExpense = async (data, id) => {
 export const deleteExpense = async (id) => {
   return await axiosInstance.delete(`/${id}`);
 };
+
+export default axiosInstance;

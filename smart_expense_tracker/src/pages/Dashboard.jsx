@@ -5,15 +5,16 @@ import Chart from "../components/chart/Chart";
 import ExpenseForm from "../features/expenses/ExpenseForm";
 import ExpenseList from "../features/expenses/ExpenseList";
 import BudgetModal from "../components/budgetModal/BudgetModal";
-import { getExpenses } from "../api/expenseService";
+import { createExpense, deleteExpense, editExpense, getExpenses } from "../api/expenseService";
 import { getUserData } from "../api/loginService";
 
 function Dashboard() {
     const [showBudgetModal, setShowBudgetModal] = useState(false);
     const [monthlyBudget, setMonthlyBudget] = useState(0);
+    const [originalMonthlyBudget, setOriginalMonthlyBudget] = useState(0);
     const [expenses, setExpenses] = useState([])
     const [expenseEdit, setExpenseEdit] = useState(null);
-    console.log('ads', expenseEdit)
+    const [isLoading, setIsLoading] = useState(false);
     const telegramId = localStorage.getItem("telegramId");
     const totalExpenses = expenses.reduce(
         (sum, expense) => sum + Number(expense.amount),
@@ -21,20 +22,61 @@ function Dashboard() {
     );
     const remainingBudget =
         monthlyBudget - totalExpenses > 0 ? monthlyBudget - totalExpenses : 0;
-    const onAddExpense = (newExpense) => {
-        setExpenses((prev) => [...prev, newExpense]);
+
+    const onAddExpense = async (newExpense) => {
+        try {
+            setIsLoading(true);
+            const response = await createExpense(newExpense);
+
+            if (response.data && response.data.data) {
+                // Use the returned expense from the API which should include the ID
+                setExpenses((prev) => [response.data.data, ...prev]);
+            } else {
+                throw new Error("Invalid response format from server");
+            }
+        } catch (error) {
+            console.error("Error adding expense:", error);
+            alert("Gagal menambahkan pengeluaran. Silakan coba lagi.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleUpdateExpense = (updatedExpense) => {
-        setExpenses((prev) =>
-            prev.map((expense) =>
-                expense.id === updatedExpense.id ? updatedExpense : expense
-            )
-        );
+    const handleUpdateExpense = async (updatedExpense) => {
+        try {
+            setIsLoading(true);
+            const { id, ...expenseData } = updatedExpense;
+            console.log("expenseData", updatedExpense);
+            const response = await editExpense(expenseData, id);
+
+            if (response.data && response.data.data) {
+                setExpenses((prev) =>
+                    prev.map((expense) =>
+                        expense._id === id ? response.data.data : expense
+                    )
+                );
+            } else {
+                throw new Error("Invalid response format from server");
+            }
+        } catch (error) {
+            console.error("Error updating expense:", error);
+            alert("Gagal memperbarui pengeluaran. Silakan coba lagi.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const onDeleteExpense = (id) => {
-        setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+    const onDeleteExpense = async (id) => {
+        try {
+            setIsLoading(true);
+            await deleteExpense(id);
+            setExpenses((prev) => prev.filter((expense) => expense._id !== id));
+        } catch (error) {
+            console.error("Error deleting expense:", error);
+            alert("Gagal menghapus pengeluaran. Silakan coba lagi.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleEditExpense = (expense) => {
@@ -44,15 +86,17 @@ function Dashboard() {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                setIsLoading(true);
                 const expenseResponse = await getExpenses();
                 setExpenses(expenseResponse.data.data);
 
                 const userResponse = await getUserData(telegramId);
-                console.log("userResponse", userResponse.data.data);
                 setMonthlyBudget(userResponse.data.data.budgetMontly
                 );
             } catch (error) {
                 console.error("Error fetching data", error);
+            } finally {
+                setIsLoading(false);
             }
         };
 
@@ -64,7 +108,7 @@ function Dashboard() {
             <div className="flex justify-between items-center">
                 <h2 className="text-4xl font-bold text-blue-500">Expense Tracker</h2>
                 <button
-                    onClick={() => setShowBudgetModal(true)}
+                    onClick={() => { setOriginalMonthlyBudget(monthlyBudget); setShowBudgetModal(true) }}
                     className="px-6 py-3 bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-opacity-50 cursor-pointer text-white text-sm rounded-lg font-semibold transition-colors duration-300 ease-in-out "
                 >
                     Set Budget Bulanan
@@ -93,6 +137,7 @@ function Dashboard() {
                 onUpdateExpense={handleUpdateExpense}
                 expenseEdit={expenseEdit}
                 setExpenseEdit={setExpenseEdit}
+                isLoading={isLoading}
             />
             <ExpenseList
                 expenses={expenses}
@@ -107,6 +152,7 @@ function Dashboard() {
                     setShowBudgetModal={setShowBudgetModal}
                     setMonthlyBudget={setMonthlyBudget}
                     monthlyBudget={monthlyBudget}
+                    originalMonthlyBudget={originalMonthlyBudget}
                 />
             )}
         </div>

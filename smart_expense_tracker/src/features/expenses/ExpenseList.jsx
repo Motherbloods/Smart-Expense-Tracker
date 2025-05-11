@@ -43,7 +43,7 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
                         {currentData.length > 0 ? (
                             currentData
                                 .map((expense) => (
-                                    <tr key={expense.id}>
+                                    <tr key={expense._id}>
                                         <td className="py-3 px-4 whitespace-nowrap">
                                             {expense.name}
                                         </td>
@@ -56,13 +56,17 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
                                             </span>
                                         </td>
                                         <td className="py-3 px-4 whitespace-nowrap">
-                                            {expense.date}
+                                            {new Date(expense.date).toLocaleDateString("id-ID", {
+                                                day: "numeric",
+                                                month: "long",
+                                                year: "numeric",
+                                            })}
                                         </td>
                                         <td className="py-3 px-4 whitespace-nowrap flex">
                                             <button onClick={() => handleEdit(expense)} className="text-indigo-600 hover:text-indigo-900 mr-2 cursor-pointer">
                                                 <Edit size={18} />
                                             </button>
-                                            <button onClick={() => onDeleteExpense(expense.id)} className="text-red-600 hover:text-red-900 cursor-pointer">
+                                            <button onClick={() => onDeleteExpense(expense._id)} className="text-red-600 hover:text-red-900 cursor-pointer">
                                                 <Trash2 size={18} />
                                             </button>
                                         </td>
