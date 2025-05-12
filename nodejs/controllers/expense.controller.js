@@ -8,7 +8,7 @@ const { handleErrorResponse } = require("../helper/errorHelper.handler");
 
 const getExpenses = async (req, res) => {
   try {
-    const expenses = await getExpensesService();
+    const expenses = await getExpensesService(req.user.telegramId);
     return res.status(200).json({
       success: true,
       message: "Expenses retrieved successfully",

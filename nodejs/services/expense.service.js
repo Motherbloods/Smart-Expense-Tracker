@@ -1,8 +1,8 @@
 const ExpenseTracker = require("../models/expense");
 
-const getExpensesService = async () => {
+const getExpensesService = async (userId) => {
   try {
-    return await ExpenseTracker.find({});
+    return await ExpenseTracker.find({ userId });
   } catch (e) {
     throw new Error("Error fetching expenses");
   }
