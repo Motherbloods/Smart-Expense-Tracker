@@ -37,7 +37,17 @@ function ExpenseForm({
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        if (name === "amount") {
+        if (name === "name") {
+            const capitalized = value
+                .split(" ")
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(" ");
+
+            setFormData((prev) => ({
+                ...prev,
+                [name]: capitalized,
+            }));
+        } else if (name === "amount") {
             const numericValue = value.replace(/\D/g, "");
 
             setFormData((prev) => ({

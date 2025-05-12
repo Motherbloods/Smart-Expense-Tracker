@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Define Gradients -->
+  <defs>
+    <linearGradient id="circleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#6366f130" />
+    </filter>
+  </defs>
+  
+  <!-- Main Circle -->
+  <circle cx="200" cy="200" r="180" fill="url(#circleGrad)" filter="url(#shadow)" />
+  
+  <!-- Stylized "E" for Expense -->
+  <path d="M170,140 L230,140 L230,160 L190,160 L190,180 L220,180 L220,200 L190,200 L190,220 L230,220 L230,240 L170,240 Z" fill="white" />
+  
+  <!-- Minimalist Chart Lines -->
+  <path d="M150,260 L170,220 L190,240 L210,190 L230,210 L250,170" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.8" />
+  
+  <!-- Dollar Symbol -->
+  <circle cx="280" cy="120" r="30" fill="white" opacity="0.9" />
+  <text x="280" y="130" font-family="Arial" font-size="24" font-weight="bold" text-anchor="middle" fill="#6366f1">$</text>
+  
+  <!-- Inner Circle Accent -->
+  <circle cx="200" cy="200" r="120" fill="none" stroke="white" stroke-width="2" stroke-dasharray="4,8" opacity="0.3" />
+  
+  <!-- App Name within the Circle -->
+  <text x="200" y="310" font-family="Arial" font-size="22" font-weight="bold" text-anchor="middle" fill="white" letter-spacing="1">EXPENSE</text>
+  <text x="200" y="335" font-family="Arial" font-size="18" font-weight="normal" text-anchor="middle" fill="white" letter-spacing="3" opacity="0.9">TRACKER</text>
+</svg>
