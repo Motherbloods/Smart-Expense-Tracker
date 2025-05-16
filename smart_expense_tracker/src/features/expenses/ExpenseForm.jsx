@@ -37,7 +37,7 @@ function ExpenseForm({
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        if (name === "name") {
+        if (name === "name" || name === "category") {
             const capitalized = value
                 .split(" ")
                 .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -108,8 +108,8 @@ function ExpenseForm({
     };
 
     return (
-        <div className="bg-white shadow-md p-4 rounded-xl space-y-6">
-            <div className="flex justify-between space-x-8">
+        <div className="bg-white shadow-md p-4 rounded-xl space-y-4">
+            <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
                 <div className="flex flex-col w-full">
                     <label
                         htmlFor="name"
@@ -125,7 +125,7 @@ function ExpenseForm({
                         value={formData.name}
                         onChange={handleChange}
                         placeholder="Masukkan nama pengeluaran"
-                        className="mt-1 p-2 border border-gray-300 rounded-md bg-white"
+                        className="mt-1 p-2 border border-gray-300 rounded-md bg-white w-full"
                     ></input>
                 </div>
                 <div className="flex flex-col w-full">
@@ -152,7 +152,7 @@ function ExpenseForm({
                     </div>
                 </div>
             </div>
-            <div className="flex justify-between space-x-8">
+            <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
                 <div className="flex flex-col w-full">
                     <label
                         htmlFor="category"
@@ -173,7 +173,7 @@ function ExpenseForm({
                                     handleChange(e);
                                 }
                             }}
-                            className="mt-1 p-2 border border-gray-300 rounded-md bg-white"
+                            className="mt-1 p-2 border border-gray-300 rounded-md bg-white w-full"
                             disabled={isLoading}
                         >
                             <option value="" disabled>
@@ -198,14 +198,14 @@ function ExpenseForm({
                                     setIsCustomCategory(false); // Jika kosong, kembali ke select
                                 }
                             }}
-                            className="mt-1 p-2 border border-gray-300 rounded-md bg-white"
+                            className="mt-1 p-2 border border-gray-300 rounded-md bg-white w-full"
                             disabled={isLoading}
                         />
                     )}
                 </div>
                 <div className="flex flex-col w-full">
                     <label
-                        htmlFor="amount"
+                        htmlFor="date"
                         className="text-base font-semibold text-gray-900"
                     >
                         Tanggal
@@ -216,15 +216,15 @@ function ExpenseForm({
                         value={formData.date}
                         onChange={handleChange}
                         id="date"
-                        className="bg-white mt-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="bg-white mt-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                         disabled={isLoading}
                     />
                 </div>
             </div>
-            <div className="flex space-x-4">
+            <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 mt-2">
                 <button
                     onClick={handleClick}
-                    className={`px-6 py-2.5 ${isLoading ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-700'} focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-opacity-50 cursor-pointer text-white text-base rounded-lg font-semibold transition-colors duration-300 ease-in-out`}
+                    className={`px-6 py-2.5 ${isLoading ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-700'} focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-opacity-50 cursor-pointer text-white text-base rounded-lg font-semibold transition-colors duration-300 ease-in-out w-full sm:w-auto`}
                     disabled={isLoading}
                 >
                     {isLoading ? "Memproses..." : (expenseEdit ? "Edit Pengeluaran" : "Tambah Pengeluaran")}
@@ -232,7 +232,7 @@ function ExpenseForm({
                 {expenseEdit && (
                     <button
                         onClick={handleCancel}
-                        className="px-6 py-2.5 bg-gray-300 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 cursor-pointer text-gray-700 text-base rounded-lg font-semibold transition-colors duration-300 ease-in-out"
+                        className="px-6 py-2.5 bg-gray-300 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 cursor-pointer text-gray-700 text-base rounded-lg font-semibold transition-colors duration-300 ease-in-out w-full sm:w-auto"
                         disabled={isLoading}
                     >
                         Batal
@@ -241,6 +241,7 @@ function ExpenseForm({
             </div>
         </div>
     );
+
 }
 
 export default ExpenseForm;
