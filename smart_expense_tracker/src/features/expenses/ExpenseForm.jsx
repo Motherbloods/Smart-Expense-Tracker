@@ -22,11 +22,14 @@ function ExpenseForm({
 
     useEffect(() => {
         if (expenseEdit) {
+            const expenseDate = new Date(expenseEdit.date);
+            const formattedDate = expenseDate.toISOString().split("T")[0]
+            console.log(formattedDate)
             setFormData({
                 name: expenseEdit.name,
                 amount: expenseEdit.amount,
                 category: expenseEdit.category,
-                date: expenseEdit.date,
+                date: formattedDate,
             });
 
             setDisplayAmount(
