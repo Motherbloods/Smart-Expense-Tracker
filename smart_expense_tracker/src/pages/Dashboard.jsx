@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Card from "../components/card/Card";
 import CategoryBreakdown from "../components/categoryBreakdown/CategoryBreakdown";
 import Chart from "../components/chart/Chart";
@@ -13,10 +13,12 @@ function Dashboard() {
     const [showBudgetModal, setShowBudgetModal] = useState(false);
     const [monthlyBudget, setMonthlyBudget] = useState(0);
     const [originalMonthlyBudget, setOriginalMonthlyBudget] = useState(0);
-    const [expenses, setExpenses] = useState([])
+    const [expenses, setExpenses] = useState([]);
     const [expenseEdit, setExpenseEdit] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
     const telegramId = localStorage.getItem("telegramId");
+
     const totalExpenses = expenses.reduce(
         (sum, expense) => sum + Number(expense.amount),
         0
@@ -83,25 +85,65 @@ function Dashboard() {
         setExpenseEdit(expense);
     };
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setIsLoading(true);
-                const expenseResponse = await getExpenses();
-                setExpenses(expenseResponse.data.data);
+    const fetchData = useCallback(async () => {
+        if (isLoading) return;
 
-                const userResponse = await getUserData(telegramId);
-                setMonthlyBudget(userResponse.data.data.budgetMontly
-                );
-            } catch (error) {
-                console.error("Error fetching data", error);
-            } finally {
-                setIsLoading(false);
+        try {
+            setIsLoading(true);
+            const expenseResponse = await getExpenses();
+            setExpenses(expenseResponse.data.data);
+
+            const userResponse = await getUserData(telegramId);
+            setMonthlyBudget(userResponse.data.data.budgetMontly);
+
+            setLastRefreshTime(Date.now());
+        } catch (error) {
+            console.error("Error fetching data", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [telegramId]); // Tambahkan semua dependency yang dipakai di dalam fetchData
+
+
+    // Fetch data on component mount
+    useEffect(() => {
+        if (telegramId) {
+            fetchData();
+        }
+    }, [telegramId, fetchData]);
+
+    // Refresh data when app visibility changes
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // Refresh if more than 5 minutes have passed since last refresh
+                const timeSinceLastRefresh = Date.now() - lastRefreshTime;
+                if (timeSinceLastRefresh > 5 * 60 * 1000) {
+                    console.log('App became visible after period of inactivity, refreshing data...');
+                    fetchData();
+                }
             }
         };
 
-        fetchData();
-    }, [telegramId]);
+        // Add visibility change listener
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Also refresh data when window is focused again
+        const handleFocus = () => {
+            const timeSinceLastRefresh = Date.now() - lastRefreshTime;
+            if (timeSinceLastRefresh > 5 * 60 * 1000) {
+                console.log('Window focused after period of inactivity, refreshing data...');
+                fetchData();
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [lastRefreshTime, fetchData]);
 
     useEffect(() => {
         const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
@@ -111,7 +153,6 @@ function Dashboard() {
         const channel = pusher.subscribe(import.meta.env.VITE_PUSHER_SUBSCRIBE);
 
         channel.bind(import.meta.env.VITE_PUSHER_BIND, (data) => {
-
             if (data && data.expense && data.telegramId === telegramId) {
                 console.log('Expense data:', data.expense);
                 const newExpense = {
@@ -145,12 +186,21 @@ function Dashboard() {
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
             <div className="flex justify-between items-center">
                 <h2 className="text-4xl font-bold text-blue-500">Expense Tracker</h2>
-                <button
-                    onClick={() => { setOriginalMonthlyBudget(monthlyBudget); setShowBudgetModal(true) }}
-                    className="px-6 py-3 bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-opacity-50 cursor-pointer text-white text-sm rounded-lg font-semibold transition-colors duration-300 ease-in-out "
-                >
-                    Set Budget Bulanan
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={fetchData}
+                        className="px-4 py-2 bg-green-500 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-opacity-50 cursor-pointer text-white text-sm rounded-lg font-semibold transition-colors duration-300 ease-in-out"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? "Loading..." : "Refresh Data"}
+                    </button>
+                    <button
+                        onClick={() => { setOriginalMonthlyBudget(monthlyBudget); setShowBudgetModal(true) }}
+                        className="px-4 py-2 bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-opacity-50 cursor-pointer text-white text-sm rounded-lg font-semibold transition-colors duration-300 ease-in-out"
+                    >
+                        Set Budget Bulanan
+                    </button>
+                </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
                 <Card
