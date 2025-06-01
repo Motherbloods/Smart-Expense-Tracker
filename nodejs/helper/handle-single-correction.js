@@ -55,6 +55,14 @@ const handleSingleCorrection = async (
       },
     });
 
+    const feedback = {
+      user_input: userSession.activity,
+      prediction: userSession.category,
+      correct: formattedCategory,
+    };
+
+    appendFeedback(feedback);
+
     await sendMessage(
       telegramId,
       `✅ Terima kasih! Pengeluaran "${userSession.activity}" telah disimpan dengan kategori "${formattedCategory}".`

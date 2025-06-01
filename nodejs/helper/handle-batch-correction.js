@@ -147,6 +147,14 @@ const handleBatchCorrection = async (
       const formattedCategory =
         item.category.charAt(0).toUpperCase() +
         item.category.slice(1).toLowerCase();
+
+      const feedback = {
+        user_input: item.activity,
+        prediction: userSession.category,
+        correct: formattedCategory,
+      };
+
+      appendFeedback(feedback);
       replyText += `- ${item.index}. "${item.activity}" sebagai "${formattedCategory}"\n`;
     });
   }
