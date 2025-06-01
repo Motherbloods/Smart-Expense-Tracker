@@ -7,7 +7,7 @@ const predictCategory = async (activity) => {
     return response.data;
   } catch (error) {
     console.error("Error predicting category:", error);
-    throw error;
+    return null;
   }
 };
 
@@ -19,7 +19,7 @@ const predictBatchCategories = async (activities) => {
     return response.data;
   } catch (error) {
     console.error("Error predicting batch categories:", error);
-    throw error;
+    return null;
   }
 };
 

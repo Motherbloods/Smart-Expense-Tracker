@@ -4,20 +4,21 @@ const getExpensesService = async (userId) => {
   try {
     return await ExpenseTracker.find({ userId });
   } catch (e) {
-    throw new Error("Error fetching expenses");
+    console.log("Error fetching expenses");
+    return [];
   }
 };
 
 const createExpenseService = async (data, userId) => {
   const { name, amount, category, date } = data;
   if (!name || !amount || !category || !date) {
-    throw new Error(
-      "Missing required fields: name, amount, category, and date."
-    );
+    console.log("Missing required fields: name, amount, category, and date.");
+    return null;
   }
 
   if (isNaN(amount)) {
-    throw new Error("Amount must be a number.");
+    console.log("Amount must be a number.");
+    return null;
   }
 
   const newExpense = new ExpenseTracker({
@@ -36,11 +37,13 @@ const editExpenseService = async (data, expenseId, userId) => {
   const expense = await ExpenseTracker.findById(expenseId);
 
   if (!expense) {
-    throw new Error("Expense not found.");
+    console.log("Expense not found.");
+    return null;
   }
 
   if (expense.userId.toString() !== userId.toString()) {
-    throw new Error("You are not authorized to edit this expense.");
+    console.log("You are not authorized to edit this expense.");
+    return null;
   }
 
   return await ExpenseTracker.findByIdAndUpdate(
@@ -60,7 +63,8 @@ const deleteExpenseService = async (expenseId, userId) => {
   const expense = await ExpenseTracker.findOne({ _id: expenseId, userId });
 
   if (!expense) {
-    throw new Error("Expense not found or you're not authorized to delete it.");
+    console.log("Expense not found or you're not authorized to delete it.");
+    return null;
   }
 
   return await ExpenseTracker.findByIdAndDelete(expenseId);
