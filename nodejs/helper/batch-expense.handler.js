@@ -37,7 +37,7 @@ const handleBatchExpenses = async (telegramId, inputText, res) => {
     predictions.forEach((pred, index) => {
       const { activity, category, confidence } = pred;
 
-      if (confidence > 0.5) {
+      if (confidence > 0.8) {
         replyText += `${
           index + 1
         }. "${activity}"\n   Kategori: ${category}\n   Keyakinan: ${(
