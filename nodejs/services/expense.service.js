@@ -10,7 +10,6 @@ const getExpensesService = async (userId) => {
 
 const createExpenseService = async (data, userId) => {
   const { name, amount, category, date } = data;
-
   if (!name || !amount || !category || !date) {
     throw new Error(
       "Missing required fields: name, amount, category, and date."

@@ -36,7 +36,7 @@ const handleSingleCorrection = async (
     const formattedCategory =
       inputText.charAt(0).toUpperCase() + inputText.slice(1).toLowerCase();
     const formattedDescription = capitalizeWords(description);
-
+    const prediction = capitalizeWords(userSession.prediction);
     await createExpenseService(
       {
         name: formattedDescription,
@@ -57,9 +57,10 @@ const handleSingleCorrection = async (
     });
 
     const feedback = {
-      user_input: userSession.activity,
-      prediction: userSession.category,
+      user_input: formattedDescription,
+      prediction,
       correct: formattedCategory,
+      confidence: userSession.confidence,
     };
 
     appendFeedback(feedback);
@@ -75,6 +76,10 @@ const handleSingleCorrection = async (
     return;
   } catch (error) {
     console.error("Error saving corrected expense:", error);
+    await sendMessage(
+      telegramId,
+      `❌ Gagal menyimpan: "${userSession.activity}"\nAlasan: ${error.message}`
+    );
   }
 };
 

@@ -1,5 +1,5 @@
 const axios = require("axios");
-const FLASK_API_URL = process.env.FLASK_API_URL || "http://localhost:5000";
+const FLASK_API_URL = process.env.FLASK_API_URL;
 
 const predictCategory = async (activity) => {
   try {

@@ -15,10 +15,10 @@ const SHEET_NAME = "Sheet1";
 async function appendFeedback(feedback) {
   const authClient = await auth.getClient();
   const sheets = google.sheets({ version: "v4", auth: authClient });
-
-  feedback.user_input = capitalizeWords(feedback.user_input);
-  feedback.prediction = capitalizeWords(feedback.prediction);
-  feedback.correct = capitalizeWords(feedback.correct);
+  console.log(feedback);
+  feedback.user_input ? capitalizeWords(feedback.user_input) : "";
+  feedback.prediction ? capitalizeWords(feedback.prediction) : "";
+  feedback.correct ? capitalizeWords(feedback.correct) : "";
 
   const now = new Date().toISOString();
   const values = [

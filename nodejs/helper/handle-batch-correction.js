@@ -27,6 +27,7 @@ const handleBatchCorrection = async (
     res.status(200).send("OK");
     return;
   }
+  console.log("userSession: " + JSON.stringify(userSession, null, 2));
 
   // Process corrections in batch mode
   const corrections = inputText
@@ -54,7 +55,6 @@ const handleBatchCorrection = async (
 
     // Find the corresponding expense
     const expense = userSession.expenses.find((e) => e.index === index);
-
     if (!expense) {
       failedCorrections.push({
         input: correction,
@@ -83,7 +83,7 @@ const handleBatchCorrection = async (
       const formattedCategory =
         category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
       const formattedDescription = capitalizeWords(description);
-
+      const prediction = capitalizeWords(expense.prediction);
       // Use the service function to create expense
       await createExpenseService(
         {
@@ -107,8 +107,9 @@ const handleBatchCorrection = async (
 
       successfulCorrections.push({
         index,
-        activity: expense.activity,
+        activity: formattedDescription,
         category,
+        prediction: prediction,
       });
 
       correctionLog.push({
@@ -127,6 +128,10 @@ const handleBatchCorrection = async (
         input: correction,
         reason: "Kesalahan database",
       });
+      await sendMessage(
+        telegramId,
+        `❌ Gagal menyimpan: "${correction}"\nAlasan: ${error.message}`
+      );
     }
   }
 
@@ -143,21 +148,21 @@ const handleBatchCorrection = async (
 
   if (successfulCorrections.length > 0) {
     replyText += "✅ Berhasil menyimpan:\n";
-    successfulCorrections.forEach((item) => {
-      // Format the category for display
+
+    for (const item of successfulCorrections) {
       const formattedCategory =
         item.category.charAt(0).toUpperCase() +
         item.category.slice(1).toLowerCase();
 
       const feedback = {
         user_input: item.activity,
-        prediction: userSession.category,
+        prediction: item.prediction,
         correct: formattedCategory,
       };
 
-      appendFeedback(feedback);
+      await appendFeedback(feedback);
       replyText += `- ${item.index}. "${item.activity}" sebagai "${formattedCategory}"\n`;
-    });
+    }
   }
 
   if (failedCorrections.length > 0) {
