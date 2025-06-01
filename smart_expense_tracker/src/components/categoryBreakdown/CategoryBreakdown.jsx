@@ -1,72 +1,86 @@
 import { useMemo } from "react";
-import usePagination from "../../hooks/usePagination.js";
+import {
+    PieChart,
+    Pie,
+    Cell,
+    Tooltip,
+    Legend,
+    ResponsiveContainer
+} from "recharts";
+
+const COLORS = [
+    "#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#A28CF4",
+    "#FF6492", "#FFA07A", "#90EE90", "#FFB6C1", "#B0C4DE"
+];
 
 function CategoryBreakdown({ expenses }) {
-    const allCategoryData = useMemo(() => {
-        const categoryTotals = {};
+    const { categoryData, totalAmount } = useMemo(() => {
+        const totals = {};
+        let sum = 0;
+
         expenses.forEach((expense) => {
-            if (!categoryTotals[expense.category]) {
-                categoryTotals[expense.category] = 0;
+            const category = expense.category || "Tidak Diketahui";
+            if (!totals[category]) {
+                totals[category] = 0;
             }
-            categoryTotals[expense.category] += expense.amount;
+            totals[category] += expense.amount;
+            sum += expense.amount;
         });
 
-        // Convert to array for pagination
-        return Object.entries(categoryTotals).map(([category, amount]) => ({
-            category,
-            amount
+        const data = Object.entries(totals).map(([category, amount]) => ({
+            name: category,
+            value: amount,
+            percent: amount / sum,
         }));
-    }, [expenses]);
 
-    // Then paginate the category breakdown
-    const { currentPage, totalPages, currentData, changePage } = usePagination(allCategoryData, 5);
+        return { categoryData: data, totalAmount: sum };
+    }, [expenses]);
 
     return (
         <div className="lg:col-span-1">
             <div className="bg-white p-4 mt-4 rounded-xl shadow-lg">
                 <h1 className="text-xl font-semibold mb-4">Breakdown Kategori</h1>
 
-                {currentData.length > 0 ? (
-                    <div className="space-y-2 divide-y divide-gray-100">
-                        {currentData.map(({ category, amount }) => (
-                            <div
-                                key={category}
-                                className="flex justify-between items-center pt-2 first:pt-0"
-                            >
-                                <span className="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-800">
-                                    {category}
-                                </span>
-                                <span className="text-sm font-semibold text-gray-700">
-                                    Rp {amount.toLocaleString("id-ID")}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
+                {categoryData.length > 0 ? (
+                    <>
+                        <div className="text-center text-sm text-gray-600 mb-2">
+                            Total Pengeluaran: <strong>Rp {totalAmount.toLocaleString("id-ID")}</strong>
+                        </div>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                                <Pie
+                                    data={categoryData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    outerRadius={100}
+                                    fill="#8884d8"
+                                    label={({ name, value, percent }) =>
+                                        `${name}: Rp ${value.toLocaleString("id-ID")} (${(percent * 100).toFixed(0)}%)`
+                                    }
+                                >
+                                    {categoryData.map((entry, index) => (
+                                        <Cell
+                                            key={`cell-${index}`}
+                                            fill={COLORS[index % COLORS.length]}
+                                        />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    formatter={(value, name) =>
+                                        [`Rp ${value.toLocaleString("id-ID")}`, name]
+                                    }
+                                />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </>
                 ) : (
                     <p className="text-sm text-center text-gray-500">
                         Belum ada data kategori
                     </p>
                 )}
-            </div>
-
-            <div className="flex justify-center items-center py-4 mx-auto">
-                <button
-                    onClick={() => changePage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 cursor-pointer text-sm text-gray-500 border border-gray-300 rounded-md hover:bg-gray-100 mr-4"
-                >
-                    Previous
-                </button>
-                <span className="text-sm text-gray-600">
-                    Page {currentPage} of {totalPages}
-                </span>
-                <button
-                    onClick={() => changePage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 cursor-pointer text-sm text-gray-500 border border-gray-300 rounded-md hover:bg-gray-100"
-                >
-                    Next
-                </button>
             </div>
         </div>
     );
