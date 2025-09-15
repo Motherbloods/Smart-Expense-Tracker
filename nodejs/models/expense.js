@@ -6,6 +6,7 @@ const expenseTrackerSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   category: { type: String, required: true },
   date: { type: Date, default: Date.now },
+  incomeId: { type: mongoose.Schema.Types.ObjectId, ref: "IncomeTracker" },
 });
 
 const ExpenseTracker = mongoose.model("ExpenseTracker", expenseTrackerSchema);
