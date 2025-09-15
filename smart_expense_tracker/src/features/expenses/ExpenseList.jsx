@@ -33,6 +33,9 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
                             <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                                 Kategori
                             </th>
+                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                                Sumber Pemasukan
+                            </th>
                             <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
                                 Tanggal
                             </th>
@@ -51,6 +54,11 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
                                         </td>
                                         <td className="py-3 px-4 whitespace-nowrap">
                                             Rp {expense.amount.toLocaleString()}
+                                        </td>
+                                        <td className="py-3 px-4 whitespace-nowrap">
+                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                {expense.incomeId ? expense.incomeId.name : 'Tidak ada sumber'}
+                                            </span>
                                         </td>
                                         <td className="py-3 px-4 whitespace-nowrap">
                                             <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
