@@ -1,48 +1,30 @@
 import { useState, useEffect, useCallback } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-function Chart({ expenses }) {
+
+function Chart({ expenses = [], incomes = [] }) {
     const [viewMode, setViewMode] = useState("daily");
-    const [currentDate, setCurrentDate] = useState(new Date());
     const [chartData, setChartData] = useState([]);
 
-    // Format date for display
-    const formatDisplayDate = () => {
-        if (viewMode === 'daily' || viewMode === 'weekly') {
-            return currentDate.toLocaleDateString("id-ID", { month: 'long', year: 'numeric' })
-        } else {
-            return currentDate.getFullYear().toString()
-        }
-    };
-
-    // Navigate to previous period
-    const goToPrevious = () => {
-        const newDate = new Date(currentDate)
-        if (viewMode === 'daily' || viewMode === 'weekly') {
-            newDate.setMonth(newDate.getMonth() - 1)
-        } else {
-            newDate.setFullYear(newDate.getFullYear() - 1)
-        }
-        setCurrentDate(newDate)
-    };
-
-    // Navigate to next period
-    const goToNext = () => {
-        const newDate = new Date(currentDate)
-        if (viewMode === 'daily' || viewMode === 'weekly') {
-            newDate.setMonth(newDate.getMonth() + 1)
-        } else {
-            newDate.setFullYear(newDate.getFullYear() + 1)
-        }
-        setCurrentDate(newDate)
-    };
-
     const prepareChartData = useCallback(() => {
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
+        if ((!expenses || expenses.length === 0) && (!incomes || incomes.length === 0)) {
+            setChartData([]);
+            return;
+        }
+
+        // Get the month and year from the filtered data (prioritize expenses, then incomes)
+        const allTransactions = [...(expenses || []), ...(incomes || [])];
+        if (allTransactions.length === 0) {
+            setChartData([]);
+            return;
+        }
+
+        const firstTransaction = allTransactions[0];
+        const transactionDate = new Date(firstTransaction.date);
+        const year = transactionDate.getFullYear();
+        const month = transactionDate.getMonth();
 
         if (viewMode === "daily") {
-            // Daily view - show expenses for each day of the current month
+            // Daily view - show expenses and incomes for each day of the current month
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const dailyData = [];
 
@@ -50,66 +32,98 @@ function Chart({ expenses }) {
             for (let day = 1; day <= daysInMonth; day++) {
                 dailyData.push({
                     date: `${day}`,
-                    amount: 0
+                    expenses: 0,
+                    incomes: 0
                 });
             }
 
             // Sum expenses for each day
             expenses.forEach(expense => {
                 const expenseDate = new Date(expense.date);
-                if (expenseDate.getMonth() === month && expenseDate.getFullYear() === year) {
-                    const day = expenseDate.getDate();
-                    dailyData[day - 1].amount += expense.amount;
+                const day = expenseDate.getDate();
+                if (day >= 1 && day <= daysInMonth) {
+                    dailyData[day - 1].expenses += expense.amount;
+                }
+            });
+
+            // Sum incomes for each day
+            incomes.forEach(income => {
+                const incomeDate = new Date(income.date);
+                const day = incomeDate.getDate();
+                if (day >= 1 && day <= daysInMonth) {
+                    dailyData[day - 1].incomes += income.amount;
                 }
             });
 
             setChartData(dailyData);
         } else if (viewMode === "weekly") {
-            // Weekly view - group by weeks in the current month
+            // Weekly view - group by weeks in the current month (only 4 weeks)
             const weeksData = [
-                { week: "Minggu 1", amount: 0 },
-                { week: "Minggu 2", amount: 0 },
-                { week: "Minggu 3", amount: 0 },
-                { week: "Minggu 4", amount: 0 }
+                { week: "Minggu 1", expenses: 0, incomes: 0 },
+                { week: "Minggu 2", expenses: 0, incomes: 0 },
+                { week: "Minggu 3", expenses: 0, incomes: 0 },
+                { week: "Minggu 4", expenses: 0, incomes: 0 }
             ];
 
             expenses.forEach(expense => {
                 const expenseDate = new Date(expense.date);
-                if (expenseDate.getMonth() === month && expenseDate.getFullYear() === year) {
-                    const day = expenseDate.getDate();
-                    // Simple week determination based on day of month
-                    let weekIndex = Math.floor((day - 1) / 7);
-                    // Cap at 3 for days after 28th
-                    if (weekIndex > 3) weekIndex = 3;
-                    weeksData[weekIndex].amount += expense.amount;
-                }
+                const day = expenseDate.getDate();
+                let weekIndex = Math.floor((day - 1) / 7);
+                if (weekIndex > 3) weekIndex = 3; // Cap at week 4 (index 3)
+                weeksData[weekIndex].expenses += expense.amount;
+            });
+
+            incomes.forEach(income => {
+                const incomeDate = new Date(income.date);
+                const day = incomeDate.getDate();
+                let weekIndex = Math.floor((day - 1) / 7);
+                if (weekIndex > 3) weekIndex = 3; // Cap at week 4 (index 3)
+                weeksData[weekIndex].incomes += income.amount;
             });
 
             setChartData(weeksData);
         } else {
-            // Monthly view - show expenses for each month of the current year
-            const monthlyData = [];
-            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            // Monthly view - show all months (January-December) for the current year
+            const monthNames = [
+                'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+            ];
 
-            // Initialize data for each month in the year
-            for (let i = 0; i < 12; i++) {
-                monthlyData.push({
-                    month: monthNames[i],
-                    amount: 0
-                });
-            }
+            // Initialize data for all 12 months
+            const monthlyData = monthNames.map((monthName, index) => ({
+                month: monthName,
+                expenses: 0,
+                incomes: 0,
+                monthIndex: index
+            }));
 
-            // Sum expenses for each month
+            // Process expenses
             expenses.forEach(expense => {
                 const expenseDate = new Date(expense.date);
-                if (expenseDate.getFullYear() === year) {
-                    monthlyData[expenseDate.getMonth()].amount += expense.amount;
+                const expenseYear = expenseDate.getFullYear();
+                const monthIndex = expenseDate.getMonth();
+
+                // Only include expenses from the same year
+                if (expenseYear === year) {
+                    monthlyData[monthIndex].expenses += expense.amount;
+                }
+            });
+
+            // Process incomes
+            incomes.forEach(income => {
+                const incomeDate = new Date(income.date);
+                const incomeYear = incomeDate.getFullYear();
+                const monthIndex = incomeDate.getMonth();
+
+                // Only include incomes from the same year
+                if (incomeYear === year) {
+                    monthlyData[monthIndex].incomes += income.amount;
                 }
             });
 
             setChartData(monthlyData);
         }
-    }, [viewMode, currentDate, expenses]);
+    }, [viewMode, expenses, incomes]);
 
     const handleViewModeChange = (e) => {
         setViewMode(e.target.value);
@@ -122,6 +136,13 @@ function Chart({ expenses }) {
         return "month";
     };
 
+    // Get chart title based on view mode
+    const getChartTitle = () => {
+        if (viewMode === "daily") return "Grafik Harian";
+        if (viewMode === "weekly") return "Grafik Mingguan";
+        return "Grafik Bulanan";
+    };
+
     useEffect(() => {
         prepareChartData();
     }, [prepareChartData]);
@@ -130,7 +151,7 @@ function Chart({ expenses }) {
         <>
             <div className="lg:col-span-1">
                 <div className="flex items-center justify-between px-4 pt-4 bg-white shadow-md rounded-t-lg">
-                    <h1 className="text-xl font-semibold">Grafik Pengeluaran</h1>
+                    <h1 className="text-lg font-semibold">{getChartTitle()}</h1>
                     <div className="relative">
                         <select
                             value={viewMode}
@@ -155,54 +176,80 @@ function Chart({ expenses }) {
                     </div>
                 </div>
 
-                <div className="bg-white px-4 shadow-md">
-                    <div className="flex justify-between items-center mb-4">
-                        <button
-                            onClick={goToPrevious}
-                            className="p-2 rounded-full hover:bg-gray-100"
-                        >
-                            <ChevronLeft size={20} />
-                        </button>
-
-                        <h2 className="font-medium text-lg">{formatDisplayDate()}</h2>
-
-                        <button
-                            onClick={goToNext}
-                            className="p-2 rounded-full hover:bg-gray-100"
-                        >
-                            <ChevronRight size={20} />
-                        </button>
+                <div className="bg-white px-4 pb-4 shadow-md rounded-b-lg">
+                    <div className="h-64 pt-4">
+                        {chartData && chartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart
+                                    data={chartData}
+                                    margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis
+                                        dataKey={getXAxisDataKey()}
+                                        angle={viewMode === "monthly" ? -45 : 0}
+                                        textAnchor={viewMode === "monthly" ? "end" : "middle"}
+                                        height={viewMode === "monthly" ? 80 : 60}
+                                    />
+                                    <YAxis
+                                        tickFormatter={(value) => `Rp ${(value / 1000).toLocaleString("id-ID")}k`}
+                                    />
+                                    <Tooltip
+                                        formatter={(value, name) => [
+                                            `Rp ${value.toLocaleString("id-ID")}`,
+                                            name === "expenses" ? "Pengeluaran" : "Pemasukan"
+                                        ]}
+                                        labelFormatter={(label) => {
+                                            if (viewMode === "daily") return `Tanggal ${label}`;
+                                            if (viewMode === "weekly") return label;
+                                            return `Bulan: ${label}`;
+                                        }}
+                                    />
+                                    {/* Income Line */}
+                                    <Line
+                                        type="monotone"
+                                        dataKey="incomes"
+                                        stroke="#22c55e"
+                                        strokeWidth={2}
+                                        activeDot={{ r: 6, fill: "#22c55e" }}
+                                        dot={{ fill: "#22c55e", strokeWidth: 2, r: 4 }}
+                                        name="incomes"
+                                    />
+                                    {/* Expense Line */}
+                                    <Line
+                                        type="monotone"
+                                        dataKey="expenses"
+                                        stroke="#ef4444"
+                                        strokeWidth={2}
+                                        activeDot={{ r: 6, fill: "#ef4444" }}
+                                        dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
+                                        name="expenses"
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-gray-500">
+                                <div className="text-center">
+                                    <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                    <p className="text-lg font-medium">Tidak ada data transaksi</p>
+                                    <p className="text-sm">untuk periode yang dipilih</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart
-                                data={chartData}
-                                margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey={getXAxisDataKey()} />
-                                <YAxis
-                                    tickFormatter={(value) => `Rp ${(value / 1000).toLocaleString("id-ID")}k`}
-
-                                />
-                                {/* Untuk menampilkan informasi ketika cursor kearah titik chart */}
-                                <Tooltip
-                                    formatter={(value) => [`Rp ${value.toLocaleString()}`, "Pengeluaran"]}
-                                    labelFormatter={(label) => {
-                                        if (viewMode === "daily") return `Tanggal ${label}`;
-                                        return label;
-                                    }}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="amount"
-                                    stroke="#8884d8"
-                                    activeDot={{ r: 8 }}
-                                    name="Pengeluaran"
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
+                    {/* Legend */}
+                    <div className="flex justify-center gap-6 mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-0.5 bg-green-500 rounded"></div>
+                            <span className="text-sm text-gray-600">Pemasukan</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-0.5 bg-red-500 rounded"></div>
+                            <span className="text-sm text-gray-600">Pengeluaran</span>
+                        </div>
                     </div>
                 </div>
             </div>
