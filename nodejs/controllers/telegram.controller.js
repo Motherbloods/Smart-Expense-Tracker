@@ -4,6 +4,7 @@ const sessionCache = require("../utils/session-cache.js");
 const { handleCorrection } = require("../helper/correction.handler.js");
 const { handleSingleExpense } = require("../helper/single-expense.handler.js");
 const pusher = require("../utils/pusher");
+const { handleIncomeCommand } = require("../helper/income.handler.js");
 
 const getTelegramIdHook = async (req, res) => {
   const { message } = req.body;
@@ -17,6 +18,12 @@ const getTelegramIdHook = async (req, res) => {
     await handleStartCommand(telegramId, message.from.username, res);
     return;
   }
+
+  if (inputText.startsWith("/pemasukan")) {
+    await handleIncomeCommand(telegramId, inputText, res);
+    return;
+  }
+
   const userSession = sessionCache.get(telegramId);
   if (userSession && userSession.awaitingCorrection) {
     await handleCorrection(telegramId, inputText, userSession, res);
