@@ -36,6 +36,29 @@ function CategoryBreakdown({ expenses }) {
         return { categoryData: data, totalAmount: sum };
     }, [expenses]);
 
+    // Custom label function untuk menampilkan persentase di dalam slice
+    // Custom label function untuk menampilkan persentase di luar slice
+    const renderLabel = ({ cx, cy, midAngle, outerRadius, percent, index }) => {
+        const RADIAN = Math.PI / 180;
+        const radius = outerRadius + 10; // atur jarak label dari chart
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+        return (
+            <text
+                x={x}
+                y={y}
+                fill={COLORS[index % COLORS.length]} // warna sesuai slice
+                textAnchor={x > cx ? "start" : "end"}
+                dominantBaseline="central"
+                fontSize={12}
+                fontWeight="bold"
+            >
+                {(percent * 100).toFixed(0)}%
+            </text>
+        );
+    };
+
     return (
         <div className="lg:col-span-1">
             <div className="bg-white p-4 mt-4 rounded-xl shadow-lg">
@@ -46,7 +69,7 @@ function CategoryBreakdown({ expenses }) {
                         <div className="text-center text-sm text-gray-600 mb-2">
                             Total Pengeluaran: <strong>Rp {totalAmount.toLocaleString("id-ID")}</strong>
                         </div>
-                        <ResponsiveContainer width="100%" height={300}>
+                        <ResponsiveContainer width="100%" height={350}>
                             <PieChart>
                                 <Pie
                                     data={categoryData}
@@ -56,9 +79,8 @@ function CategoryBreakdown({ expenses }) {
                                     cy="50%"
                                     outerRadius={100}
                                     fill="#8884d8"
-                                    label={({ name, value, percent }) =>
-                                        `${name}: Rp ${value.toLocaleString("id-ID")} (${(percent * 100).toFixed(0)}%)`
-                                    }
+                                    label={renderLabel}
+                                    labelLine={false}
                                 >
                                     {categoryData.map((entry, index) => (
                                         <Cell
