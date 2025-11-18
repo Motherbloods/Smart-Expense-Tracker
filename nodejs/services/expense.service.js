@@ -100,8 +100,10 @@ const createExpenseService = async (data, userId) => {
     incomeId: incomeId,
   });
 
-  const savedExpense = await newExpense.save();
+  let savedExpense = await newExpense.save();
   console.log("💾 Expense berhasil disimpan:", savedExpense);
+
+  savedExpense = await savedExpense.populate("incomeId", "name");
 
   return savedExpense;
 };
