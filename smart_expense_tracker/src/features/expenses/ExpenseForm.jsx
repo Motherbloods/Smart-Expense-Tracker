@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getIncomes } from "../../api/incomeService";
+import { toast } from "react-toastify";
 
 function ExpenseForm({
     onAddExpense,
@@ -20,11 +21,21 @@ function ExpenseForm({
     const [incomes, setIncomes] = useState([]);
     const [selectedIncome, setSelectedIncome] = useState(null);
     const [isCustomCategory, setIsCustomCategory] = useState(false);
-    const [availableIncomes, setAvailableIncomes] = useState([]);
-
+    const availableIncomes = incomes.filter(income => income.remainingAmount > 0);
     const uniqueCategories = [
         ...new Set(expensesData.map((expense) => expense.category)),
     ];
+
+    // Fungsi untuk refresh data incomes
+    const refreshIncomes = async () => {
+        try {
+            const res = await getIncomes();
+            const incomesData = Array.isArray(res.data.data) ? res.data.data : [];
+            setIncomes(incomesData);
+        } catch (error) {
+            console.error("Gagal mengambil data income:", error);
+        }
+    };
 
     useEffect(() => {
         if (expenseEdit) {
@@ -48,36 +59,36 @@ function ExpenseForm({
                 setSelectedIncome(editIncome);
             }
         }
-    }, [expenseEdit, incomes]);
+
+        // Reset selectedIncome jika income yang dipilih sudah tidak tersedia
+        if (selectedIncome && !availableIncomes.find(income => income._id === selectedIncome._id)) {
+            setSelectedIncome(null);
+            setFormData(prev => ({ ...prev, sourceIncomeId: '' }));
+            toast.warning("Sumber pendapatan yang dipilih sudah tidak tersedia", {
+                position: "top-right",
+                autoClose: 3000,
+                theme: "colored",
+            });
+        }
+    }, [expenseEdit, incomes, selectedIncome]);
 
     useEffect(() => {
-        const fetchIncomes = async () => {
-            try {
-                const res = await getIncomes();
-
-                // Pastikan struktur res.data adalah array
-                const incomesData = Array.isArray(res.data.data) ? res.data.data : [];
-
-                // Set semua data income
-                setIncomes(incomesData);
-
-                // Filter income yang masih memiliki saldo (amount > 0)
-                const availableIncomesData = incomesData.filter(income => income.amount > 0);
-                setAvailableIncomes(availableIncomesData);
-            } catch (error) {
-                console.error("Gagal mengambil data income:", error);
-            }
-        };
-        fetchIncomes();
+        refreshIncomes();
     }, []);
+
+    // TAMBAHAN: Effect untuk refresh incomes ketika expensesData berubah
+    useEffect(() => {
+        refreshIncomes();
+    }, [expensesData.length]); // Refresh ketika jumlah expense berubah
 
     const validateAmountAgainstIncome = (amount, income) => {
         if (!income || !amount) return true;
-        return Number(amount) <= income.amount;
+        return Number(amount) <= income.remainingAmount; // Gunakan remainingAmount, bukan amount
     };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+
         if (name === "name" || name === "category") {
             const capitalized = value
                 .split(" ")
@@ -88,12 +99,25 @@ function ExpenseForm({
                 ...prev,
                 [name]: capitalized,
             }));
-        } else if (name === "amount") {
+        }
+        else if (name === "amount") {
+            // Cegah input amount jika belum memilih sumber pendapatan (kecuali mode edit)
+            if (!selectedIncome && !expenseEdit) {
+                showErrorToast("Pilih sumber pendapatan terlebih dahulu");
+                return;
+            }
+
             const numericValue = value.replace(/\D/g, "");
 
             // Validasi hanya jika ada income yang dipilih
-            if (selectedIncome && numericValue && !validateAmountAgainstIncome(numericValue, selectedIncome)) {
-                alert(`Jumlah pengeluaran tidak boleh melebihi saldo ${selectedIncome.name}: Rp ${new Intl.NumberFormat("id-ID").format(selectedIncome.amount)}`);
+            if (
+                selectedIncome &&
+                numericValue &&
+                !validateAmountAgainstIncome(numericValue, selectedIncome)
+            ) {
+                showErrorToast(
+                    `Jumlah pengeluaran tidak boleh melebihi saldo ${selectedIncome.name}: Rp ${new Intl.NumberFormat("id-ID").format(selectedIncome.remainingAmount)}`
+                );
                 return;
             }
 
@@ -102,28 +126,54 @@ function ExpenseForm({
                 [name]: numericValue,
             }));
 
-            if (numericValue) {
-                const formatted = new Intl.NumberFormat("id-ID").format(numericValue);
-                setDisplayAmount(formatted);
-            } else {
-                setDisplayAmount("");
-            }
-        } else if (name === "sourceIncomeId") {
+            setDisplayAmount(
+                numericValue
+                    ? new Intl.NumberFormat("id-ID").format(numericValue)
+                    : ""
+            );
+        }
+        else if (name === "sourceIncomeId") {
             setFormData((prev) => ({ ...prev, sourceIncomeId: value }));
 
-            // Set selected income untuk validasi
+            // Set selected income untuk validasi - gunakan availableIncomes yang real-time
             const selected = availableIncomes.find(income => income._id === value);
             setSelectedIncome(selected);
 
-            // Validasi amount yang sudah diisi sebelumnya
-            if (formData.amount && selected && !validateAmountAgainstIncome(formData.amount, selected)) {
-                alert(`Jumlah pengeluaran melebihi saldo ${selected.name}. Silakan sesuaikan jumlah pengeluaran.`);
+            // Reset amount jika ada amount yang sudah diisi sebelumnya dan melebihi saldo income baru
+            if (
+                formData.amount &&
+                selected &&
+                !validateAmountAgainstIncome(formData.amount, selected)
+            ) {
+                toast.error(
+                    `Jumlah pengeluaran melebihi saldo ${selected.name}. Jumlah telah direset.`,
+                    {
+                        position: "top-right",
+                        autoClose: 4000,
+                        theme: "colored",
+                    }
+                );
+                // Reset amount
+                setFormData((prev) => ({ ...prev, amount: "" }));
+                setDisplayAmount("");
             }
-        } else {
+        }
+        else {
             setFormData((prev) => ({
                 ...prev,
                 [name]: value,
             }));
+        }
+    };
+
+    const showErrorToast = (message) => {
+        if (!toast.isActive("form-error")) {
+            toast.error(message, {
+                toastId: "form-error",
+                position: "top-right",
+                autoClose: 3000,
+                theme: "colored",
+            });
         }
     };
 
@@ -136,18 +186,19 @@ function ExpenseForm({
         return basicFieldsValid && sourceIncomeValid && amountValid && hasAvailableIncomes;
     };
 
-    const handleClick = () => {
-        console.log('handle click');
+    const handleClick = async () => { // UBAH: jadikan async
+        console.log("handle click");
 
+        // Validasi gagal
         if (!isFormValid()) {
             if (availableIncomes.length === 0 && !expenseEdit) {
-                alert("Tidak ada pemasukan tersedia. Silakan tambahkan pemasukan terlebih dahulu.");
+                toast.error("Tidak ada pemasukan tersedia. Silakan tambahkan pemasukan terlebih dahulu.");
             } else if (!formData.name || !formData.amount || !formData.category || !formData.date) {
-                alert("Mohon lengkapi semua field yang diperlukan.");
+                toast.error("Mohon lengkapi semua field yang diperlukan.");
             } else if (!formData.sourceIncomeId && !(expenseEdit && expenseEdit.incomeId)) {
-                alert("Mohon pilih sumber pendapatan.");
+                toast.error("Mohon pilih sumber pendapatan.");
             } else if (selectedIncome && !validateAmountAgainstIncome(formData.amount, selectedIncome)) {
-                alert("Jumlah pengeluaran melebihi saldo yang tersedia.");
+                toast.error("Jumlah pengeluaran melebihi saldo yang tersedia.");
             }
             return;
         }
@@ -156,9 +207,12 @@ function ExpenseForm({
         const fullDateTime = new Date(`${formData.date}T${currentTime}`);
 
         // Untuk mode edit, gunakan sourceIncomeId yang ada jika tidak diubah
-        const finalSourceIncomeId = formData.sourceIncomeId || (expenseEdit ? expenseEdit.incomeId : '');
-        const finalSourceIncomeName = selectedIncome ? selectedIncome.name :
-            (expenseEdit ? expenseEdit.sourceIncomeName || '' : '');
+        const finalSourceIncomeId = formData.sourceIncomeId || (expenseEdit ? expenseEdit.incomeId : "");
+        const finalSourceIncomeName = selectedIncome
+            ? selectedIncome.name
+            : expenseEdit
+                ? expenseEdit.sourceIncomeName || ""
+                : "";
 
         const expenseData = {
             ...formData,
@@ -168,26 +222,36 @@ function ExpenseForm({
             sourceIncomeName: finalSourceIncomeName,
         };
 
-        console.log('expense data:', expenseData);
+        console.log("expense data:", expenseData);
 
-        if (expenseEdit) {
-            onUpdateExpense({ ...expenseData, id: expenseEdit._id });
-            setExpenseEdit(null);
-        } else {
-            onAddExpense(expenseData);
+        try {
+            if (expenseEdit) {
+                await onUpdateExpense({ ...expenseData, id: expenseEdit._id });
+                toast.success("Pengeluaran berhasil diperbarui ✅");
+                setExpenseEdit(null);
+            } else {
+                await onAddExpense(expenseData);
+                toast.success("Pengeluaran berhasil ditambahkan ✅");
+            }
+
+            // TAMBAHAN: Refresh data incomes setelah berhasil menyimpan
+            await refreshIncomes();
+
+            // Reset form
+            setFormData({
+                name: "",
+                amount: "",
+                category: "",
+                sourceIncomeId: "",
+                date: new Date().toISOString().split("T")[0],
+            });
+            setDisplayAmount("");
+            setSelectedIncome(null);
+            setIsCustomCategory(false);
+        } catch (error) {
+            console.error("Error saat menyimpan pengeluaran:", error);
+            toast.error("Terjadi kesalahan. Silakan coba lagi ❌");
         }
-
-        // Reset form
-        setFormData({
-            name: "",
-            amount: "",
-            category: "",
-            sourceIncomeId: '',
-            date: new Date().toISOString().split("T")[0]
-        });
-        setDisplayAmount("");
-        setSelectedIncome(null);
-        setIsCustomCategory(false);
     };
 
     const handleCancel = () => {
@@ -260,39 +324,33 @@ function ExpenseForm({
                     />
                 </div>
                 <div className="flex flex-col w-full">
-                    <label
-                        htmlFor="amount"
-                        className="text-base font-semibold text-gray-700"
-                    >
-                        Jumlah Pengeluaran
-                        {selectedIncome && (
+                    <label htmlFor="sourceIncomeId" className="text-base font-semibold text-gray-700">
+                        Sumber Pendapatan
+                        <span className="text-red-500 ml-1">*</span>
+                        {expenseEdit && !formData.sourceIncomeId && (
                             <span className="text-sm text-gray-500 font-normal block">
-                                Saldo tersedia: Rp {new Intl.NumberFormat("id-ID").format(selectedIncome.amount)}
+                                Menggunakan sumber pendapatan sebelumnya
                             </span>
                         )}
                     </label>
-                    <div className="relative">
-                        <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${hasNoAvailableIncomes ? 'text-gray-400' : 'text-gray-500'
-                            }`}>
-                            Rp
-                        </span>
-                        <input
-                            type="text"
-                            id="amount"
-                            name="amount"
-                            value={displayAmount}
-                            onChange={handleChange}
-                            placeholder="0"
-                            className={`mt-1 p-2 pl-8 border rounded-md w-full ${getAmountValidationMessage() ? 'border-red-300' : 'border-gray-300'
-                                } ${hasNoAvailableIncomes ? 'bg-gray-100 text-gray-500' : 'bg-white'}`}
-                            disabled={isLoading || hasNoAvailableIncomes}
-                        />
-                        {getAmountValidationMessage() && (
-                            <span className="text-sm text-red-500 mt-1 block">
-                                {getAmountValidationMessage()}
-                            </span>
-                        )}
-                    </div>
+                    <select
+                        id="sourceIncomeId"
+                        name="sourceIncomeId"
+                        value={formData.sourceIncomeId}
+                        onChange={handleChange}
+                        className={`mt-1 p-2 border border-gray-300 rounded-md w-full ${hasNoAvailableIncomes ? 'bg-gray-100 text-gray-500' : 'bg-white'
+                            }`}
+                        disabled={isLoading || hasNoAvailableIncomes}
+                    >
+                        <option value="" disabled>
+                            {availableIncomes.length === 0 ? "Tidak ada pendapatan tersedia" : "Pilih sumber pendapatan"}
+                        </option>
+                        {availableIncomes.map((income) => (
+                            <option key={income._id} value={income._id}>
+                                {income.name} - Rp {new Intl.NumberFormat("id-ID").format(income.remainingAmount)}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
@@ -351,32 +409,56 @@ function ExpenseForm({
                 </div>
 
                 <div className="flex flex-col w-full">
-                    <label htmlFor="sourceIncomeId" className="text-base font-semibold text-gray-700">
-                        Sumber Pendapatan
-                        {expenseEdit && !formData.sourceIncomeId && (
-                            <span className="text-sm text-gray-500 font-normal block">
-                                Menggunakan sumber pendapatan sebelumnya
+                    <label
+                        htmlFor="amount"
+                        className="text-base font-semibold text-gray-700 flex justify-between items-center"
+                    >
+                        <span>Jumlah Pengeluaran</span>
+                        {selectedIncome && (
+                            <span className="text-sm text-gray-500 font-normal">
+                                Saldo Tersedia: Rp {new Intl.NumberFormat("id-ID").format(selectedIncome.remainingAmount)}
                             </span>
                         )}
                     </label>
-                    <select
-                        id="sourceIncomeId"
-                        name="sourceIncomeId"
-                        value={formData.sourceIncomeId}
-                        onChange={handleChange}
-                        className={`mt-1 p-2 border border-gray-300 rounded-md w-full ${hasNoAvailableIncomes ? 'bg-gray-100 text-gray-500' : 'bg-white'
-                            }`}
-                        disabled={isLoading || hasNoAvailableIncomes}
-                    >
-                        <option value="" disabled>
-                            {availableIncomes.length === 0 ? "Tidak ada pendapatan tersedia" : "Pilih sumber pendapatan"}
-                        </option>
-                        {availableIncomes.map((income) => (
-                            <option key={income._id} value={income._id}>
-                                {income.name} - Rp {new Intl.NumberFormat("id-ID").format(income.amount)}
-                            </option>
-                        ))}
-                    </select>
+
+                    {/* Wrapper untuk input + Rp */}
+                    <div className="relative mt-1">
+                        <span
+                            className={`absolute left-3 inset-y-0 flex items-center pointer-events-none ${hasNoAvailableIncomes || (!selectedIncome && !expenseEdit)
+                                ? "text-gray-400"
+                                : "text-gray-500"
+                                }`}
+                        >
+                            Rp
+                        </span>
+                        <input
+                            type="text"
+                            id="amount"
+                            name="amount"
+                            value={displayAmount}
+                            onChange={handleChange}
+                            placeholder={!selectedIncome && !expenseEdit ? "Pilih sumber pendapatan dulu" : "0"}
+                            className={`p-2 pl-8 border rounded-md w-full ${getAmountValidationMessage() ? "border-red-300" : "border-gray-300"
+                                } ${hasNoAvailableIncomes || (!selectedIncome && !expenseEdit)
+                                    ? "bg-gray-100 text-gray-500"
+                                    : "bg-white"
+                                }`}
+                            disabled={isLoading || hasNoAvailableIncomes || (!selectedIncome && !expenseEdit)}
+                        />
+                    </div>
+
+                    {/* Pesan info jika belum memilih sumber pendapatan */}
+                    {!selectedIncome && !hasNoAvailableIncomes && !expenseEdit && (
+                        <p className="text-sm text-amber-600 mt-1 mb-1">
+                            Pilih sumber pendapatan terlebih dahulu
+                        </p>
+                    )}
+
+                    {getAmountValidationMessage() && (
+                        <span className="text-sm text-red-500 mt-1 block">
+                            {getAmountValidationMessage()}
+                        </span>
+                    )}
                 </div>
 
                 <div className="flex flex-col w-full">
