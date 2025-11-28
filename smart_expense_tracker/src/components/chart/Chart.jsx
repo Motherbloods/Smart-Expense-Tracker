@@ -1,21 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 function Chart({ expenses = [], incomes = [] }) {
     const [viewMode, setViewMode] = useState("daily");
-    const [chartData, setChartData] = useState([]);
 
-    const prepareChartData = useCallback(() => {
+    // ✅ OPTIMASI: Gunakan useMemo untuk prepare chart data
+    // Data hanya di-process ulang ketika dependencies berubah
+    const chartData = useMemo(() => {
         if ((!expenses || expenses.length === 0) && (!incomes || incomes.length === 0)) {
-            setChartData([]);
-            return;
+            return [];
         }
 
         // Get the month and year from the filtered data (prioritize expenses, then incomes)
         const allTransactions = [...(expenses || []), ...(incomes || [])];
         if (allTransactions.length === 0) {
-            setChartData([]);
-            return;
+            return [];
         }
 
         const firstTransaction = allTransactions[0];
@@ -55,7 +54,7 @@ function Chart({ expenses = [], incomes = [] }) {
                 }
             });
 
-            setChartData(dailyData);
+            return dailyData;
         } else if (viewMode === "weekly") {
             // Weekly view - group by weeks in the current month (only 4 weeks)
             const weeksData = [
@@ -81,7 +80,7 @@ function Chart({ expenses = [], incomes = [] }) {
                 weeksData[weekIndex].incomes += income.amount;
             });
 
-            setChartData(weeksData);
+            return weeksData;
         } else {
             // Monthly view - show all months (January-December) for the current year
             const monthNames = [
@@ -121,9 +120,9 @@ function Chart({ expenses = [], incomes = [] }) {
                 }
             });
 
-            setChartData(monthlyData);
+            return monthlyData;
         }
-    }, [viewMode, expenses, incomes]);
+    }, [viewMode, expenses, incomes]); // Hanya re-compute saat ini berubah
 
     const handleViewModeChange = (e) => {
         setViewMode(e.target.value);
@@ -142,10 +141,6 @@ function Chart({ expenses = [], incomes = [] }) {
         if (viewMode === "weekly") return "Grafik Mingguan";
         return "Grafik Bulanan";
     };
-
-    useEffect(() => {
-        prepareChartData();
-    }, [prepareChartData]);
 
     return (
         <>
