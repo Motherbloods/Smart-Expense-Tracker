@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useState } from "react";
 import { getIncomes } from "../../api/incomeService";
 import { toast } from "react-toastify";
@@ -415,18 +416,17 @@ function ExpenseForm({
                     >
                         <span>Jumlah Pengeluaran</span>
                         {selectedIncome && (
-                            <span className="text-sm text-gray-500 font-normal">
+                            <span className="text-sm text-gray-600 font-normal">
                                 Saldo Tersedia: Rp {new Intl.NumberFormat("id-ID").format(selectedIncome.remainingAmount)}
                             </span>
                         )}
                     </label>
 
-                    {/* Wrapper untuk input + Rp */}
                     <div className="relative mt-1">
                         <span
                             className={`absolute left-3 inset-y-0 flex items-center pointer-events-none ${hasNoAvailableIncomes || (!selectedIncome && !expenseEdit)
-                                ? "text-gray-400"
-                                : "text-gray-500"
+                                ? "text-gray-600"
+                                : "text-gray-700"
                                 }`}
                         >
                             Rp
@@ -440,22 +440,21 @@ function ExpenseForm({
                             placeholder={!selectedIncome && !expenseEdit ? "Pilih sumber pendapatan dulu" : "0"}
                             className={`p-2 pl-8 border rounded-md w-full ${getAmountValidationMessage() ? "border-red-300" : "border-gray-300"
                                 } ${hasNoAvailableIncomes || (!selectedIncome && !expenseEdit)
-                                    ? "bg-gray-100 text-gray-500"
-                                    : "bg-white"
+                                    ? "bg-gray-100 text-gray-700 placeholder-gray-500"
+                                    : "bg-white text-gray-800 placeholder-gray-400"
                                 }`}
                             disabled={isLoading || hasNoAvailableIncomes || (!selectedIncome && !expenseEdit)}
                         />
                     </div>
 
-                    {/* Pesan info jika belum memilih sumber pendapatan */}
                     {!selectedIncome && !hasNoAvailableIncomes && !expenseEdit && (
-                        <p className="text-sm text-amber-600 mt-1 mb-1">
+                        <p className="text-sm text-amber-700 mt-1 mb-1">
                             Pilih sumber pendapatan terlebih dahulu
                         </p>
                     )}
 
                     {getAmountValidationMessage() && (
-                        <span className="text-sm text-red-500 mt-1 block">
+                        <span className="text-sm text-red-600 mt-1 block">
                             {getAmountValidationMessage()}
                         </span>
                     )}
