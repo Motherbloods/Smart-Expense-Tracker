@@ -1,58 +1,72 @@
-import { useState } from "react";
-import usePagination from "../../hooks/usePagination.js"
-import { Edit, Trash2, AlertTriangle, X } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Edit, Trash2, AlertTriangle, X, Eye } from "lucide-react";
 
-function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
+function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [expenseToDelete, setExpenseToDelete] = useState(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [selectedExpense, setSelectedExpense] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
-    const { currentPage, totalPages, currentData, changePage } = usePagination(
-        expenses,
-        10,
-        (a, b) => new Date(b.date) - new Date(a.date)
-    );
+    const totalPages = Math.ceil(expenses.length / itemsPerPage);
+    const startIdx = (currentPage - 1) * itemsPerPage;
+    const currentData = expenses.slice(startIdx, startIdx + itemsPerPage);
 
-    const handleEdit = (expense) => {
-        handleEditExpense(expense)
+    const handleEdit = useCallback((expense) => {
+        handleEditExpense(expense);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    }, [handleEditExpense]);
 
-    const handleDeleteClick = (expense) => {
+    const handleViewDetail = useCallback((expense) => {
+        setSelectedExpense(expense);
+        setShowDetailModal(true);
+        // Random: 50% chance telegram, 50% website
+        const isViaWebsite = Math.random() > 0.5;
+        logExpense(expense, isViaWebsite);
+    }, []);
+
+    const logExpense = (expense, isViaWebsite) => {
+        // Implementasi logging ke telegram atau website
+        console.log(`Logged via ${isViaWebsite ? 'Website' : 'Telegram'}:`, expense);
+    };
+
+    const handleDeleteClick = useCallback((expense) => {
         setExpenseToDelete(expense);
         setShowDeleteModal(true);
-    }
+    }, []);
 
-    const confirmDelete = () => {
+    const confirmDelete = useCallback(() => {
         if (expenseToDelete) {
             onDeleteExpense(expenseToDelete._id);
         }
         setShowDeleteModal(false);
         setExpenseToDelete(null);
-    }
+    }, [expenseToDelete, onDeleteExpense]);
 
-    const cancelDelete = () => {
+    const cancelDelete = useCallback(() => {
         setShowDeleteModal(false);
         setExpenseToDelete(null);
-    }
+    }, []);
 
-    // Delete Confirmation Modal Component
+    const closeDetailModal = useCallback(() => {
+        setShowDetailModal(false);
+        setSelectedExpense(null);
+    }, []);
+
+    // Delete Confirmation Modal
     const DeleteConfirmationModal = () => {
         if (!showDeleteModal || !expenseToDelete) return null;
 
         return (
             <div className="fixed inset-0 z-50 overflow-y-auto">
-                {/* Backdrop */}
                 <div
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm
-             transition-opacity duration-300 ease-in-out 
-             animate-fadeIn"
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out animate-fadeIn"
                     onClick={cancelDelete}
                 ></div>
 
-                {/* Modal */}
                 <div className="flex min-h-full items-center justify-center p-4">
                     <div className="relative transform overflow-hidden rounded-xl bg-white shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md">
-                        {/* Close button */}
                         <button
                             onClick={cancelDelete}
                             className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
@@ -60,7 +74,6 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
                             <X size={20} />
                         </button>
 
-                        {/* Modal content */}
                         <div className="bg-white px-6 pt-6 pb-4">
                             <div className="flex items-center">
                                 <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100">
@@ -90,7 +103,6 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
                             </div>
                         </div>
 
-                        {/* Action buttons */}
                         <div className="bg-gray-50 px-6 py-4 flex flex-col-reverse sm:flex-row sm:gap-3">
                             <button
                                 type="button"
@@ -113,13 +125,100 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
         );
     };
 
+    // Detail Modal
+    const DetailModal = () => {
+        if (!showDetailModal || !selectedExpense) return null;
+
+        return (
+            <div className="fixed inset-0 z-50 overflow-y-auto">
+                <div
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
+                    onClick={closeDetailModal}
+                ></div>
+
+                <div className="flex min-h-full items-center justify-center p-4">
+                    <div className="relative transform overflow-hidden rounded-xl bg-white shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md">
+                        <button
+                            onClick={closeDetailModal}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <div className="bg-white px-6 pt-6 pb-4">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                                Detail Pengeluaran
+                            </h3>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-sm text-gray-500 font-medium">Nama Pengeluaran</p>
+                                    <p className="text-base text-gray-900 font-semibold mt-1">
+                                        {selectedExpense.name}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="text-sm text-gray-500 font-medium">Jumlah</p>
+                                    <p className="text-base text-gray-900 font-semibold mt-1">
+                                        Rp {selectedExpense.amount.toLocaleString()}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="text-sm text-gray-500 font-medium">Kategori</p>
+                                    <span className="inline-flex mt-1 px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                        {selectedExpense.category}
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <p className="text-sm text-gray-500 font-medium">Sumber Pemasukan</p>
+                                    <p className="text-base text-gray-900 mt-1">
+                                        {selectedExpense.incomeId ? selectedExpense.incomeId.name : 'Gaji Bulanan'}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="text-sm text-gray-500 font-medium">Tanggal</p>
+                                    <p className="text-base text-gray-900 mt-1">
+                                        {new Date(selectedExpense.date).toLocaleDateString("id-ID", {
+                                            day: "numeric",
+                                            month: "long",
+                                            year: "numeric",
+                                        })} - Telegram
+                                    </p>
+                                </div>
+
+                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+                                    <p className="text-sm text-gray-500 font-medium">Confidence</p>
+                                    <p className="text-2xl font-bold text-green-600 mt-1">88.7%</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-50 px-6 py-4">
+                            <button
+                                type="button"
+                                className="w-full inline-flex justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+                                onClick={closeDetailModal}
+                            >
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <>
             <div className="p-4 bg-white shadow-md mt-4 rounded-t-lg">
                 <h1 className="text-xl font-semibold">Daftar Pengeluaran</h1>
             </div>
 
-            {/* Tampilan desktop table */}
+            {/* Desktop Table */}
             <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                     <thead className="bg-gray-50">
@@ -146,49 +245,60 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {currentData.length > 0 ? (
-                            currentData
-                                .map((expense) => (
-                                    <tr key={expense._id}>
-                                        <td className="py-3 px-4">
-                                            <div className="max-w-[150px] truncate" title={expense.name}>
-                                                {expense.name}
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4 whitespace-nowrap">
-                                            <span className="font-medium">
-                                                Rp {expense.amount.toLocaleString()}
-                                            </span>
-                                        </td>
-                                        <td className="py-3 px-4 whitespace-nowrap">
-                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                {expense.category}
-                                            </span>
-                                        </td>
-
-                                        <td className="py-3 px-4 whitespace-nowrap">
-                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                {expense.incomeId ? expense.incomeId.name : 'Tidak ada sumber'}
-                                            </span>
-                                        </td>
-                                        <td className="py-3 px-4 whitespace-nowrap">
-                                            {new Date(expense.date).toLocaleDateString("id-ID", {
-                                                day: "numeric",
-                                                month: "long",
-                                                year: "numeric",
-                                            })}
-                                        </td>
-                                        <td className="py-3 px-4 whitespace-nowrap">
-                                            <div className="flex gap-2">
-                                                <button onClick={() => handleEdit(expense)} className="text-indigo-600 hover:text-indigo-900 cursor-pointer">
-                                                    <Edit size={18} />
-                                                </button>
-                                                <button onClick={() => handleDeleteClick(expense)} className="text-red-600 hover:text-red-900 cursor-pointer">
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
+                            currentData.map((expense) => (
+                                <tr key={expense._id}>
+                                    <td className="py-3 px-4">
+                                        <div className="max-w-[150px] truncate" title={expense.name}>
+                                            {expense.name}
+                                        </div>
+                                    </td>
+                                    <td className="py-3 px-4 whitespace-nowrap">
+                                        <span className="font-medium">
+                                            Rp {expense.amount.toLocaleString()}
+                                        </span>
+                                    </td>
+                                    <td className="py-3 px-4 whitespace-nowrap">
+                                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                            {expense.category}
+                                        </span>
+                                    </td>
+                                    <td className="py-3 px-4 whitespace-nowrap">
+                                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                            {expense.incomeId ? expense.incomeId.name : 'Tidak ada sumber'}
+                                        </span>
+                                    </td>
+                                    <td className="py-3 px-4 whitespace-nowrap">
+                                        {new Date(expense.date).toLocaleDateString("id-ID", {
+                                            day: "numeric",
+                                            month: "long",
+                                            year: "numeric",
+                                        })}
+                                    </td>
+                                    <td className="py-3 px-4 whitespace-nowrap">
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleViewDetail(expense)}
+                                                className="text-gray-600 hover:text-gray-900 cursor-pointer"
+                                                title="Lihat Detail"
+                                            >
+                                                <Eye size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleEdit(expense)}
+                                                className="text-indigo-600 hover:text-indigo-900 cursor-pointer"
+                                            >
+                                                <Edit size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteClick(expense)}
+                                                className="text-red-600 hover:text-red-900 cursor-pointer"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
                         ) : (
                             <tr>
                                 <td colSpan="6" className="py-4 px-4 text-center text-gray-500">
@@ -200,7 +310,7 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
                 </table>
             </div>
 
-            {/* Tampilan mobile card */}
+            {/* Mobile Card */}
             <div className="md:hidden">
                 {currentData.length > 0 ? (
                     currentData.map((expense) => (
@@ -208,10 +318,22 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
                             <div className="flex justify-between items-center mb-2">
                                 <h3 className="font-medium text-gray-900">{expense.name}</h3>
                                 <div className="flex space-x-2">
-                                    <button onClick={() => handleEdit(expense)} className="text-indigo-600 hover:text-indigo-900">
+                                    <button
+                                        onClick={() => handleViewDetail(expense)}
+                                        className="text-gray-600 hover:text-gray-900"
+                                    >
+                                        <Eye size={16} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleEdit(expense)}
+                                        className="text-indigo-600 hover:text-indigo-900"
+                                    >
                                         <Edit size={16} />
                                     </button>
-                                    <button onClick={() => handleDeleteClick(expense)} className="text-red-600 hover:text-red-900">
+                                    <button
+                                        onClick={() => handleDeleteClick(expense)}
+                                        className="text-red-600 hover:text-red-900"
+                                    >
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
@@ -248,7 +370,7 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
 
             <div className="flex justify-center items-center py-4 mx-auto">
                 <button
-                    onClick={() => changePage(currentPage - 1)}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
                     className="px-4 py-2 cursor-pointer text-sm text-gray-500 border border-gray-300 rounded-md hover:bg-gray-100 mr-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -258,7 +380,7 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
                     Page {currentPage} of {totalPages}
                 </span>
                 <button
-                    onClick={() => changePage(currentPage + 1)}
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
                     className="px-4 py-2 cursor-pointer text-sm text-gray-500 border border-gray-300 rounded-md hover:bg-gray-100 ml-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -266,8 +388,8 @@ function ExpenseList({ expenses, onDeleteExpense, handleEditExpense }) {
                 </button>
             </div>
 
-            {/* Delete Confirmation Modal */}
             <DeleteConfirmationModal />
+            <DetailModal />
         </>
     );
 }
