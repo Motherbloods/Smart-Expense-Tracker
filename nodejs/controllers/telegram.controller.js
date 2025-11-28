@@ -5,6 +5,7 @@ const { handleCorrection } = require("../helper/correction.handler.js");
 const { handleSingleExpense } = require("../helper/single-expense.handler.js");
 const pusher = require("../utils/pusher");
 const { handleIncomeCommand } = require("../helper/income.handler.js");
+const { handleHelpCommand } = require("../helper/help.handler.js");
 
 const getTelegramIdHook = async (req, res) => {
   const { message } = req.body;
@@ -16,6 +17,11 @@ const getTelegramIdHook = async (req, res) => {
     message.text === "/start"
   ) {
     await handleStartCommand(telegramId, message.from.username, res);
+    return;
+  }
+
+  if (inputText === "/help") {
+    await handleHelpCommand(telegramId, res);
     return;
   }
 
