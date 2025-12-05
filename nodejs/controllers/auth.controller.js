@@ -32,7 +32,14 @@ const loginToDashboard = async (req, res) => {
       }
     );
 
-    res.json({ token: jwtToken });
+    res.json({
+      token: jwtToken,
+      user: {
+        username: existingUser.username,
+        budgetMontly: existingUser.budgetMontly,
+        role: existingUser.role,
+      },
+    });
   } catch (e) {
     console.error("Error logging in:", e.message);
     return handleErrorResponse(res, "Error logging in", e);
