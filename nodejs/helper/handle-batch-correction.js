@@ -93,7 +93,8 @@ const handleBatchCorrection = async (
             category: formattedCategory,
             date: new Date(),
           },
-          telegramId
+          telegramId,
+          "telegram"
         );
 
         if (savedExpenses) {

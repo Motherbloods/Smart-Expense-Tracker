@@ -10,7 +10,7 @@ const getExpensesService = async (userId) => {
   }
 };
 
-const createExpenseService = async (data, userId) => {
+const createExpenseService = async (data, userId, source = "website") => {
   const { name, amount, category, date, sourceIncomeId } = data;
   console.log("📥 Input Data:", data);
 
@@ -98,6 +98,7 @@ const createExpenseService = async (data, userId) => {
     category,
     date,
     incomeId: incomeId,
+    source,
   });
 
   let savedExpense = await newExpense.save();

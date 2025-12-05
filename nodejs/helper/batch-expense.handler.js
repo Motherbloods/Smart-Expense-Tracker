@@ -74,7 +74,7 @@ const handleBatchExpenses = async (telegramId, inputText, res) => {
     if (recognizedExpenses.length > 0) {
       try {
         for (const expenseData of recognizedExpenses) {
-          await createExpenseService(expenseData, telegramId);
+          await createExpenseService(expenseData, telegramId, "telegram");
         }
         pusher.trigger("expenses", "new-expense", {
           telegramId,

@@ -1,6 +1,6 @@
 const { createExpenseService } = require("../services/expense.service");
 const { sendMessage } = require("../services/telegram.service");
-const appendFeedback = require("../utils/googleapi");
+// const appendFeedback = require("../utils/googleapi");
 const pusher = require("../utils/pusher");
 const sessionCache = require("../utils/session-cache");
 const {
@@ -63,7 +63,8 @@ const handleSingleCorrection = async (
         category: formattedCategory,
         date: new Date(),
       },
-      telegramId
+      telegramId,
+      "telegram"
     );
 
     if (!savedExpense) {
@@ -94,7 +95,7 @@ const handleSingleCorrection = async (
         prediction,
         correct: formattedCategory,
       };
-      await appendFeedback(feedback);
+      // await appendFeedback(feedback);
     } catch (feedbackError) {
       console.error("Failed to append feedback:", feedbackError);
     }
