@@ -20,9 +20,10 @@ function Login() {
         setLoading(true);
 
         try {
-            const token = await loginToDashboard(telegramId);
-            localStorage.setItem("token", token.token);
+            const response = await loginToDashboard(telegramId);
+            localStorage.setItem("token", response.token);
             localStorage.setItem("telegramId", telegramId);
+            localStorage.setItem("user", JSON.stringify(response.user));
             navigate("/");
         } catch (err) {
             console.error(err);

@@ -5,7 +5,7 @@ import { getIncomes } from "../api/incomeService";
 import { getUserData } from "../api/loginService";
 import { FileText, Download, TrendingUp, TrendingDown, Calendar, DollarSign } from "lucide-react";
 
-import { useLocation, useNavigate } from "react-router-dom";
+import useNavigation from "../hooks/useNavigation";
 
 function Laporan() {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -18,34 +18,9 @@ function Laporan() {
     const [isDataReady, setIsDataReady] = useState(false);
     const [startTransition] = useTransition();
 
-    const navigate = useNavigate();
-    const location = useLocation();
-
     const telegramId = localStorage.getItem("telegramId");
 
-    const currentPage = useMemo(() => {
-        if (location.pathname === '/') return 'dashboard';
-        if (location.pathname === '/laporan') return 'laporan';
-        if (location.pathname === '/aktivitas-pengguna') return 'aktivitas';
-        return 'laporan';
-    }, [location.pathname]);
-
-    // ✅ ROUTING: Handler untuk page change dari Sidebar
-    const handlePageChange = useCallback((pageId) => {
-        switch (pageId) {
-            case 'dashboard':
-                navigate('/');
-                break;
-            case 'laporan':
-                navigate('/laporan');
-                break;
-            case 'aktivitas':
-                navigate('/aktivitas-pengguna');
-                break;
-            default:
-                navigate('/');
-        }
-    }, [navigate]);
+    const { currentPage, handlePageChange } = useNavigation();
 
     // Helper function untuk filter data berdasarkan bulan dan tahun
     const filterDataByMonth = useCallback((data, month, year) => {

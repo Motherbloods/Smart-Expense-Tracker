@@ -10,6 +10,8 @@ const axiosInstance = axios.create({
 let isRefreshing = false;
 // Queue of requests to retry after token refresh
 let refreshQueue = [];
+// Flag to prevent multiple redirects
+let isRedirecting = false;
 
 // Function to retry requests after token refresh
 const processQueue = (error, token = null) => {
@@ -24,19 +26,51 @@ const processQueue = (error, token = null) => {
   refreshQueue = [];
 };
 
-axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// ✅ Helper function untuk safe redirect (cegah multiple redirects)
+const safeRedirectToLogin = () => {
+  if (isRedirecting) return;
+
+  // Cek apakah sudah di login page
+  if (window.location.pathname === "/login") {
+    return;
   }
-  return config;
-});
+
+  isRedirecting = true;
+
+  localStorage.clear();
+
+  // Hard redirect untuk ensure clean state
+  window.location.href = "/login";
+};
+
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // Handle 401 responses
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // ✅ Skip interceptor untuk endpoint login
+    if (originalRequest.url?.includes("/login")) {
+      return Promise.reject(error);
+    }
+
+    // ✅ Cek jika sedang dalam proses redirect, skip
+    if (isRedirecting) {
+      return Promise.reject(error);
+    }
 
     // If error is 401 (Unauthorized) and we haven't retried already
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -51,33 +85,43 @@ axiosInstance.interceptors.response.use(
           const telegramId = localStorage.getItem("telegramId");
 
           if (!telegramId) {
-            // No telegramId, redirect to login
-            window.location.href = "/login";
+            processQueue(new Error("No telegramId"), null);
+            safeRedirectToLogin();
             return Promise.reject(error);
           }
 
-          // Call login API directly without using the intercepted instance
-          const response = await axios.post(`${API_URL}/login`, { telegramId });
+          // ✅ Gunakan axios biasa untuk refresh token
+          const response = await axios.post(
+            `${API_URL}/login`,
+            {
+              telegramId,
+            },
+            {
+              timeout: 5000, // ✅ Tambah timeout 5 detik
+            }
+          );
 
-          if (response.data && response.data.token) {
+          if (response.data?.token) {
             localStorage.setItem("token", response.data.token);
-
-            // Update original request with new token
             originalRequest.headers.Authorization = `Bearer ${response.data.token}`;
 
-            // Process any queued requests
+            // Process queued requests
             processQueue(null, response.data.token);
 
-            // Try the original request again
-            return axios(originalRequest);
+            // Retry original request
+            return axiosInstance(originalRequest);
+          } else {
+            throw new Error("No token received");
           }
         } catch (refreshError) {
+          console.error("Token refresh failed:", refreshError);
+
           // Process queued requests with error
           processQueue(refreshError, null);
 
-          // Clear token and redirect to login
-          localStorage.removeItem("token");
-          window.location.href = "/login";
+          // Clear and redirect
+          safeRedirectToLogin();
+
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;
@@ -88,7 +132,7 @@ axiosInstance.interceptors.response.use(
           refreshQueue.push({
             resolve: (token) => {
               originalRequest.headers.Authorization = `Bearer ${token}`;
-              resolve(axios(originalRequest));
+              resolve(axiosInstance(originalRequest));
             },
             reject: (err) => {
               reject(err);

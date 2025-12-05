@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '../components/sidebar/Sidebar';
 import { toast } from 'react-toastify';
-import { useLocation, useNavigate } from 'react-router-dom';
+import useNavigation from '../hooks/useNavigation';
 
 function AktivitasPengguna() {
     const [activities, setActivities] = useState([]);
@@ -12,34 +12,9 @@ function AktivitasPengguna() {
     const [searchQuery, setSearchQuery] = useState('');
     const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
 
-    const navigate = useNavigate();
-    const location = useLocation();
     const [_, setIsSidebarCollapsed] = useState(false);
 
-    // ✅ Determine current page based on route
-    const currentPage = useMemo(() => {
-        if (location.pathname === '/') return 'dashboard';
-        if (location.pathname === '/laporan') return 'laporan';
-        if (location.pathname === '/aktivitas-pengguna') return 'aktivitas';
-        return 'laporan';
-    }, [location.pathname]);
-
-    // ✅ ROUTING: Handler untuk page change dari Sidebar
-    const handlePageChange = useCallback((pageId) => {
-        switch (pageId) {
-            case 'dashboard':
-                navigate('/');
-                break;
-            case 'laporan':
-                navigate('/laporan');
-                break;
-            case 'aktivitas':
-                navigate('/aktivitas-pengguna');
-                break;
-            default:
-                navigate('/');
-        }
-    }, [navigate]);
+    const { currentPage, handlePageChange } = useNavigation();
 
     const telegramId = localStorage.getItem("telegramId");
 

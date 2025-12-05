@@ -39,9 +39,39 @@ export const getUserData = (telegramId) => {
     `user_${telegramId}`,
     async () => {
       const response = await axiosInstance.get(`/getUser/${telegramId}`);
-      console.log("📥 Fetched user data from API");
+      console.log("🔥 Fetched user data from API");
       return response;
     },
     10 * 60 * 1000 // Cache 10 menit (user data jarang berubah)
   );
+};
+
+// ✅ FIXED: Logout yang lebih aman dengan prevent race condition
+export const logoutUser = (telegramId) => {
+  return new Promise((resolve) => {
+    try {
+      console.log("🚪 Logout initiated");
+
+      // ✅ Invalidate semua cache DULU sebelum clear localStorage
+      if (telegramId) {
+        apiCache.invalidate(`user_${telegramId}`);
+        apiCache.invalidate(`expenses_${telegramId}`);
+        apiCache.invalidate(`summary_${telegramId}`);
+      }
+
+      // ✅ Clear localStorage
+      localStorage.removeItem("telegramId");
+      localStorage.removeItem("userData");
+      localStorage.removeItem("token");
+
+      console.log("✅ Logout successful, all data cleared");
+
+      // ✅ Resolve after clearing
+      resolve(true);
+    } catch (error) {
+      console.error("❌ Logout error:", error);
+      // ✅ Tetap resolve meski error (fallback)
+      resolve(false);
+    }
+  });
 };

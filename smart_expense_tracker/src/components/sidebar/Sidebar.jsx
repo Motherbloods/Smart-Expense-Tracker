@@ -5,7 +5,7 @@ import Activity from "lucide-react/dist/esm/icons/activity";
 import Menu from "lucide-react/dist/esm/icons/menu";
 import X from "lucide-react/dist/esm/icons/x";
 import ChevronLeft from "lucide-react/dist/esm/icons/chevron-left";
-import { LogOut } from 'lucide-react';
+import { LogOut, BarChart3 } from 'lucide-react';
 
 const MenuItem = memo(({ item, isActive, isCollapsed, onClick }) => {
     const Icon = item.icon;
@@ -56,30 +56,64 @@ MenuItem.displayName = 'MenuItem';
 function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
     const [isOpen, setIsOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [userRole, setUserRole] = useState('user'); // Default role
+    const [user, setUser] = useState(null);
+    const telegramId = localStorage.getItem("telegramId");
 
-    // ✅ OPTIMASI: Memoize menu items (tidak perlu dibuat ulang setiap render)
-    const menuItems = useMemo(() => [
-        {
-            id: 'dashboard',
-            label: 'Dashboard',
-            icon: Home,
-            description: 'Ringkasan keuangan'
-        },
-        {
-            id: 'laporan',
-            label: 'Laporan Keuangan',
-            icon: FileText,
-            description: 'Laporan detail transaksi'
-        },
-        // {
-        //     id: 'aktivitas',
-        //     label: 'Aktivitas Pengguna',
-        //     icon: Activity,
-        //     description: 'Riwayat aktivitas'
-        // }
-    ], []);
+    // ✅ Get user role from localStorage
+    useEffect(() => {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+            try {
+                const userData = JSON.parse(storedUser);
+                console.log("Parsed user data:", userData);
+                setUser(userData);
+                setUserRole(userData.role || 'user');
+            } catch (error) {
+                console.error("Error parsing user data:", error);
+                setUserRole('user');
+                setUser(null);
+            }
+        }
+    }, []);
 
-    // ✅ OPTIMASI: Stabilkan toggle functions dengan useCallback
+    // ✅ Menu items berdasarkan role
+    const menuItems = useMemo(() => {
+        if (userRole === 'admin') {
+            return [
+                {
+                    id: 'aktivitas',
+                    label: 'Aktivitas Pengguna',
+                    icon: Activity,
+                    description: 'Monitor aktivitas user'
+                },
+                {
+                    id: 'admin-laporan',
+                    label: 'Laporan Admin',
+                    icon: BarChart3,
+                    description: 'Laporan keseluruhan'
+                }
+            ];
+        } else {
+            // role === 'user'
+            return [
+                {
+                    id: 'dashboard',
+                    label: 'Dashboard',
+                    icon: Home,
+                    description: 'Ringkasan keuangan'
+                },
+                {
+                    id: 'laporan',
+                    label: 'Laporan Keuangan',
+                    icon: FileText,
+                    description: 'Laporan detail transaksi'
+                }
+            ];
+        }
+    }, [userRole]);
+
     const toggleSidebar = useCallback(() => {
         setIsOpen(prev => !prev);
     }, []);
@@ -88,20 +122,40 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
         setIsCollapsed(prev => !prev);
     }, []);
 
-    // ✅ OPTIMASI: Stabilkan handleMenuClick dengan useCallback
     const handleMenuClick = useCallback((itemId) => {
-        // ✅ FIX: Cek apakah onPageChange adalah function sebelum dipanggil
         if (onPageChange && typeof onPageChange === 'function') {
             onPageChange(itemId);
         }
 
-        // Close mobile menu after clicking
         if (window.innerWidth < 1024) {
             setIsOpen(false);
         }
     }, [onPageChange]);
 
-    // Notify parent component when collapse state changes
+    // ✅ Logout handler
+    const handleLogout = useCallback(async () => {
+        if (isLoggingOut) {
+            console.log("Already logging out...");
+            return;
+        }
+
+        setIsLoggingOut(true);
+
+        try {
+            setIsOpen(false);
+
+            const { logoutUser } = await import('../../api/loginService');
+            await logoutUser(telegramId);
+
+            window.location.href = "/login";
+
+        } catch (error) {
+            console.error("Logout error:", error);
+            localStorage.clear();
+            window.location.href = "/login";
+        }
+    }, [isLoggingOut, telegramId]);
+
     useEffect(() => {
         if (onCollapseChange && typeof onCollapseChange === 'function') {
             onCollapseChange(isCollapsed);
@@ -148,7 +202,9 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
                                     </div>
                                     <div>
                                         <h2 className="font-bold text-gray-800 text-lg">Expense Tracker</h2>
-                                        <p className="text-xs text-gray-500">Kelola Keuangan</p>
+                                        <p className="text-xs text-gray-500">
+                                            {userRole === 'admin' ? 'Admin Panel' : 'Kelola Keuangan'}
+                                        </p>
                                     </div>
                                 </div>
                             )}
@@ -160,8 +216,7 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
                                 aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                             >
                                 <ChevronLeft
-                                    className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''
-                                        }`}
+                                    className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`}
                                 />
                             </button>
                         </div>
@@ -179,24 +234,37 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
                                     onClick={() => handleMenuClick(item.id)}
                                 />
                             ))}
-                        </ul><div className="border-t border-gray-200">
+                        </ul>
+
+                        {/* ✅ Logout Button */}
+                        <div className=" border-t border-gray-200">
                             <button
-                                onClick={() => { }}
+                                onClick={handleLogout}
+                                disabled={isLoggingOut}
                                 className={`
                                     w-full flex items-center gap-4 px-4 py-3 rounded-xl
                                     transition-all duration-300 group
-                                    hover:bg-red-50 text-gray-700 hover:text-red-600
+                                    ${isLoggingOut
+                                        ? 'opacity-50 cursor-not-allowed bg-gray-100'
+                                        : 'hover:bg-red-50 text-gray-700 hover:text-red-600'
+                                    }
                                 `}
                                 title={isCollapsed ? 'Logout' : ''}
                             >
                                 <LogOut
-                                    className="w-6 h-6 flex-shrink-0 text-gray-500 group-hover:text-red-500 transition-colors duration-300"
+                                    className={`w-6 h-6 flex-shrink-0 transition-colors duration-300 ${isLoggingOut
+                                        ? 'text-gray-400'
+                                        : 'text-gray-500 group-hover:text-red-500'
+                                        }`}
                                 />
 
                                 {!isCollapsed && (
                                     <div className="flex-1 text-left">
-                                        <div className="font-semibold text-gray-800 group-hover:text-red-600">
-                                            Logout
+                                        <div className={`font-semibold ${isLoggingOut
+                                            ? 'text-gray-400'
+                                            : 'text-gray-800 group-hover:text-red-600'
+                                            }`}>
+                                            {isLoggingOut ? 'Logging out...' : 'Logout'}
                                         </div>
                                         <div className="text-xs text-gray-500">
                                             Keluar dari akun
@@ -213,18 +281,24 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
                             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4">
                                 <div className="flex items-start gap-3">
                                     <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <span className="text-white font-bold">H</span>
+                                        <span className="text-white font-bold">
+                                            {userRole === 'admin' ? 'A' : 'H'}
+                                        </span>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-gray-800 truncate">Habib Risky K</p>
-                                        <p className="text-xs text-gray-500 truncate">motherbloodss</p>
+                                        <p className="font-semibold text-gray-800 truncate">{user?.username}</p>
+                                        <p className="text-xs text-gray-500 truncate">
+                                            {userRole === 'admin' ? 'Administrator' : 'User'}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                         ) : (
                             <div className="flex justify-center">
                                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-                                    <span className="text-white font-bold">U</span>
+                                    <span className="text-white font-bold">
+                                        {userRole === 'admin' ? 'A' : 'U'}
+                                    </span>
                                 </div>
                             </div>
                         )}
@@ -235,5 +309,4 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
     );
 }
 
-// ✅ OPTIMASI: Export dengan memo untuk prevent unnecessary re-renders
 export default memo(Sidebar);

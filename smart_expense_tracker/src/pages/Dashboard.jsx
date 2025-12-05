@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, lazy, Suspense, useMemo, useTransition } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Card from "../components/card/Card";
 import Sidebar from "../components/sidebar/Sidebar";
 import { createExpense, deleteExpense, editExpense, getExpenses } from "../api/expenseService";
@@ -7,6 +7,7 @@ import { createIncome, deleteIncome, editIncome, getIncomes } from "../api/incom
 import { getUserData } from "../api/loginService";
 import { toast } from "react-toastify";
 import { cachedAPICall, apiCache } from "../utils/apiCache";
+import useNavigation from "../hooks/useNavigation";
 
 // ✅ LAZY LOADING
 const CategoryBreakdown = lazy(() => import("../components/categoryBreakdown/CategoryBreakdown"));
@@ -59,7 +60,6 @@ const CardSkeleton = () => (
 
 function Dashboard() {
     const navigate = useNavigate();
-    const location = useLocation();
     const [_, startTransition] = useTransition();
 
     const [showBudgetModal, setShowBudgetModal] = useState(false);
@@ -81,12 +81,7 @@ function Dashboard() {
 
     const telegramId = localStorage.getItem("telegramId");
 
-    const currentPage = useMemo(() => {
-        if (location.pathname === '/') return 'dashboard';
-        if (location.pathname === '/laporan') return 'laporan';
-        if (location.pathname === '/aktivitas-pengguna') return 'aktivitas';
-        return 'dashboard';
-    }, [location.pathname]);
+    const { currentPage } = useNavigation();
 
     const filterDataByMonth = useCallback((data, month, year) => {
         return data.filter(item => {
@@ -145,6 +140,9 @@ function Dashboard() {
                 break;
             case 'aktivitas':
                 navigate('/aktivitas-pengguna');
+                break;
+            case 'admin-laporan':
+                navigate('/admin-laporan');
                 break;
             default:
                 navigate('/');
