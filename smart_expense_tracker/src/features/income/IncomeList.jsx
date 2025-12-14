@@ -14,7 +14,7 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
 
     const handleEdit = (income) => {
         handleEditIncome(income)
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 600, behavior: 'smooth' });
     }
 
     const handleDeleteClick = (income) => {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 
 function IncomeForm({
     onAddIncome,
@@ -73,35 +74,62 @@ function IncomeForm({
         }
     };
 
-    const handleClick = () => {
+    const handleClick = async () => {
+        // Validasi form
         if (
-            formData.name &&
-            formData.amount &&
-            formData.source &&
-            formData.date
+            !formData.name ||
+            !formData.amount ||
+            !formData.source ||
+            !formData.date
         ) {
-            const currentTime = new Date().toTimeString().split(" ")[0]; // jam:menit:detik
+            toast.error("Mohon lengkapi field yang wajib (nama, jumlah, sumber, tanggal).", {
+                position: "top-right",
+                autoClose: 3000,
+            });
+            return;
+        }
+
+        try {
+            const currentTime = new Date().toTimeString().split(" ")[0];
             const fullDateTime = new Date(`${formData.date}T${currentTime}`);
 
             const incomeData = {
-                ...formData,
+                name: formData.name,
                 amount: Number(formData.amount),
+                source: formData.source,
+                notes: formData.notes,
                 date: fullDateTime,
             };
+
             if (incomeEdit) {
-                onUpdateIncome({ ...incomeData, id: incomeEdit._id });
+                // ✅ Mode Edit
+                await onUpdateIncome({ id: incomeEdit._id, ...incomeData });
+                // Toast akan ditampilkan di Dashboard.jsx handleUpdateIncome
                 setIncomeEdit(null);
             } else {
-                onAddIncome(incomeData);
+                // ✅ Mode Tambah
+                await onAddIncome(incomeData);
+                toast.success("✅ Pemasukan berhasil ditambahkan", {
+                    position: "top-right",
+                    autoClose: 3000,
+                });
             }
 
-            // Reset form
-            setFormData({ name: "", amount: "", source: "", notes: "", date: "" });
+            // ✅ Reset form setelah berhasil
+            setFormData({
+                name: "",
+                amount: "",
+                source: "",
+                notes: "",
+                date: new Date().toISOString().split("T")[0],
+            });
             setDisplayAmount("");
-        } else {
-            alert("Mohon lengkapi field yang wajib (nama, jumlah, sumber, tanggal).");
+            setIsCustomSource(false);
+
+        } catch (error) {
+            console.error("Error saat menyimpan pemasukan:", error);
+            // Error toast akan ditampilkan di Dashboard.jsx
         }
-        setIsCustomSource(false);
     };
 
     const handleCancel = () => {
