@@ -15,21 +15,13 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
 
     const handleEdit = useCallback((expense) => {
         handleEditExpense(expense);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 600, behavior: 'smooth' });
     }, [handleEditExpense]);
 
     const handleViewDetail = useCallback((expense) => {
         setSelectedExpense(expense);
         setShowDetailModal(true);
-        // Random: 50% chance telegram, 50% website
-        const isViaWebsite = Math.random() > 0.5;
-        logExpense(expense, isViaWebsite);
     }, []);
-
-    const logExpense = (expense, isViaWebsite) => {
-        // Implementasi logging ke telegram atau website
-        console.log(`Logged via ${isViaWebsite ? 'Website' : 'Telegram'}:`, expense);
-    };
 
     const handleDeleteClick = useCallback((expense) => {
         setExpenseToDelete(expense);
@@ -53,6 +45,34 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
         setShowDetailModal(false);
         setSelectedExpense(null);
     }, []);
+
+    const getSourceIncomeName = (expense) => {
+        if (expense.sourceIncomeName) {
+            return expense.sourceIncomeName;
+        }
+        if (expense.incomeId && typeof expense.incomeId === 'object') {
+            return expense.incomeId.name || 'Tidak ada sumber';
+        }
+        if (expense.incomeId && typeof expense.incomeId === 'string') {
+            return 'Income ID: ' + expense.incomeId.substring(0, 8) + '...';
+        }
+        return 'Tidak ada sumber';
+    };
+
+    // ✅ Helper function untuk format confidence
+    const getConfidenceDisplay = (confidence) => {
+        const conf = confidence !== undefined && confidence !== null ? confidence : 1;
+        return (conf * 100).toFixed(1);
+    };
+
+    // ✅ Helper function untuk warna confidence badge
+    const getConfidenceBadgeColor = (confidence) => {
+        const conf = confidence !== undefined && confidence !== null ? confidence : 1;
+        if (conf >= 0.9) return 'bg-green-100 text-green-800';
+        if (conf >= 0.8) return 'bg-blue-100 text-blue-800';
+        if (conf >= 0.7) return 'bg-yellow-100 text-yellow-800';
+        return 'bg-red-100 text-red-800';
+    };
 
     // Delete Confirmation Modal
     const DeleteConfirmationModal = () => {
@@ -175,7 +195,14 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
                                 <div>
                                     <p className="text-sm text-gray-500 font-medium">Sumber Pemasukan</p>
                                     <p className="text-base text-gray-900 mt-1">
-                                        {selectedExpense.incomeId ? selectedExpense.incomeId.name : 'Gaji Bulanan'}
+                                        {getSourceIncomeName(selectedExpense)}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="text-sm text-gray-500 font-medium">Source</p>
+                                    <p className="text-base text-gray-900 mt-1 capitalize">
+                                        {selectedExpense.source}
                                     </p>
                                 </div>
 
@@ -186,13 +213,16 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
                                             day: "numeric",
                                             month: "long",
                                             year: "numeric",
-                                        })} - Telegram
+                                        })}
                                     </p>
                                 </div>
 
+                                {/* ✅ Confidence Display */}
                                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
                                     <p className="text-sm text-gray-500 font-medium">Confidence</p>
-                                    <p className="text-2xl font-bold text-green-600 mt-1">88.7%</p>
+                                    <p className="text-2xl font-bold text-green-600 mt-1">
+                                        {getConfidenceDisplay(selectedExpense.confidence)}%
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -263,8 +293,8 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
                                         </span>
                                     </td>
                                     <td className="py-3 px-4 whitespace-nowrap">
-                                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                            {expense.incomeId ? expense.incomeId.name : 'Tidak ada sumber'}
+                                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                            {getSourceIncomeName(expense)}
                                         </span>
                                     </td>
                                     <td className="py-3 px-4 whitespace-nowrap">
@@ -301,7 +331,7 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="6" className="py-4 px-4 text-center text-gray-500">
+                                <td colSpan="7" className="py-4 px-4 text-center text-gray-500">
                                     Belum ada data pengeluaran
                                 </td>
                             </tr>
@@ -348,6 +378,19 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
                                     <p className="text-gray-500">Kategori:</p>
                                     <span className="px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full bg-blue-100 text-blue-800">
                                         {expense.category}
+                                    </span>
+                                </div>
+                                <div className="col-span-2">
+                                    <p className="text-gray-500">Sumber:</p>
+                                    <span className="px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full bg-green-100 text-green-800">
+                                        {getSourceIncomeName(expense)}
+                                    </span>
+                                </div>
+                                {/* ✅ Tampilkan Confidence di Mobile */}
+                                <div className="col-span-2">
+                                    <p className="text-gray-500">Confidence:</p>
+                                    <span className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${getConfidenceBadgeColor(expense.confidence)}`}>
+                                        {getConfidenceDisplay(expense.confidence)}%
                                     </span>
                                 </div>
                                 <div className="col-span-2">
