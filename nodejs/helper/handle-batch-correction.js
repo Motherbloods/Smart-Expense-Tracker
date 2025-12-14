@@ -21,18 +21,16 @@ const handleBatchCorrection = async (
       inputText.toLowerCase() === "selesai" ||
       inputText.toLowerCase() === "done"
     ) {
-      // Clear the session
       sessionCache.delete(telegramId);
       await sendMessage(telegramId, "✅ Koreksi selesai. Terima kasih!");
-
       res.status(200).send("OK");
       return;
     }
+
     console.log("userSession: " + JSON.stringify(userSession, null, 2));
 
-    // Process corrections in batch mode
     const corrections = inputText
-      .split(/[\n,]+/) // split by newline *atau* koma
+      .split(/[\n,]+/)
       .map((line) => line.trim())
       .filter((line) => line !== "");
 
@@ -79,17 +77,28 @@ const handleBatchCorrection = async (
       }
 
       try {
-        const amount = extractAmount(expense.activity);
-        const description = cleanDescription(expense.activity);
+        // PERBAIKAN: Gunakan amount dari session, fallback ke extractAmount
+        const amount = expense.amount || extractAmount(expense.activity) || 0;
+
+        // PERBAIKAN: Gunakan name dari session, fallback ke cleanDescription
+        const description = expense.name || cleanDescription(expense.activity);
+
         const formattedCategory =
           category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
         const formattedDescription = capitalizeWords(description);
         const prediction = capitalizeWords(expense.prediction);
+
+        console.log("💰 Saving expense:", {
+          name: formattedDescription,
+          amount: amount,
+          category: formattedCategory,
+        });
+
         // Use the service function to create expense
         const savedExpenses = await createExpenseService(
           {
             name: formattedDescription,
-            amount: amount || 0,
+            amount: amount,
             category: formattedCategory,
             date: new Date(),
           },
@@ -102,7 +111,7 @@ const handleBatchCorrection = async (
             telegramId,
             expense: {
               name: formattedDescription,
-              amount,
+              amount: amount,
               category: formattedCategory,
               date: new Date(),
             },
@@ -111,8 +120,9 @@ const handleBatchCorrection = async (
           successfulCorrections.push({
             index,
             activity: formattedDescription,
-            category,
+            category: formattedCategory,
             prediction: prediction,
+            amount: amount, // Tambahkan untuk display
           });
 
           correctionLog.push({
@@ -135,7 +145,7 @@ const handleBatchCorrection = async (
         console.error("Unexpected error in batch correction:", error);
         failedCorrections.push({
           input: correction,
-          reason: "Kesalahan sistem",
+          reason: `Kesalahan sistem: ${error.message}`,
         });
       }
     }
@@ -155,22 +165,22 @@ const handleBatchCorrection = async (
       replyText += "✅ Berhasil menyimpan:\n";
 
       for (const item of successfulCorrections) {
-        const formattedCategory =
-          item.category.charAt(0).toUpperCase() +
-          item.category.slice(1).toLowerCase();
-
         try {
           const feedback = {
             user_input: item.activity,
             prediction: item.prediction,
-            correct: formattedCategory,
+            correct: item.category,
           };
           await appendFeedback(feedback);
         } catch (error) {
           console.error("Error appending feedback:", error);
         }
 
-        replyText += `- ${item.index}. "${item.activity}" sebagai "${formattedCategory}"\n`;
+        replyText += `- ${item.index}. "${
+          item.activity
+        }" (Rp ${item.amount.toLocaleString("id-ID")}) sebagai "${
+          item.category
+        }"\n`;
       }
     }
 
@@ -189,13 +199,16 @@ const handleBatchCorrection = async (
     } else {
       replyText += "\nMasih ada pengeluaran yang belum dikoreksi:\n";
       userSession.expenses.forEach((expense) => {
-        replyText += `${expense.index}. "${expense.activity}"\n`;
+        replyText += `${expense.index}. "${
+          expense.name || expense.activity
+        }" (Rp ${expense.amount.toLocaleString("id-ID")})\n`;
       });
-      replyText += "\nGunakan format: [nomor]. [kategori] untuk mengoreksi.";
+      replyText +=
+        '\nGunakan format: [nomor]. [kategori] untuk mengoreksi atau ketik "/selesai" untuk mengakhiri.';
 
-      // Update the session
       sessionCache.set(telegramId, userSession);
     }
+
     await sendMessage(telegramId, replyText);
     return res.status(200).send("OK");
   } catch (error) {
