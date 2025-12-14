@@ -4,142 +4,120 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
 });
 
-// Variable to track if we're currently refreshing token
 let isRefreshing = false;
-// Queue of requests to retry after token refresh
-let refreshQueue = [];
-// Flag to prevent multiple redirects
-let isRedirecting = false;
+let failedQueue = [];
 
-// Function to retry requests after token refresh
+// ✅ Process queue ketika refresh selesai
 const processQueue = (error, token = null) => {
-  refreshQueue.forEach((prom) => {
+  failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
       prom.resolve(token);
     }
   });
-
-  refreshQueue = [];
+  failedQueue = [];
 };
 
-// ✅ Helper function untuk safe redirect (cegah multiple redirects)
 const safeRedirectToLogin = () => {
-  if (isRedirecting) return;
-
-  // Cek apakah sudah di login page
   if (window.location.pathname === "/login") {
     return;
   }
 
-  isRedirecting = true;
+  // Clear data
+  localStorage.removeItem("telegramId");
+  localStorage.removeItem("userData");
 
-  localStorage.clear();
-
-  // Hard redirect untuk ensure clean state
   window.location.href = "/login";
 };
 
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Handle 401 responses
+// ✅ Response interceptor
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // ✅ Skip interceptor untuk endpoint login
-    if (originalRequest.url?.includes("/login")) {
+    // ✅ Skip interceptor untuk login/refresh/logout
+    if (
+      originalRequest.url?.includes("/login") ||
+      originalRequest.url?.includes("/refresh") ||
+      originalRequest.url?.includes("/logout")
+    ) {
       return Promise.reject(error);
     }
 
-    // ✅ Cek jika sedang dalam proses redirect, skip
-    if (isRedirecting) {
-      return Promise.reject(error);
-    }
+    // ✅ Handle 401 errors
+    if (error.response?.status === 401) {
+      const errorCode = error.response?.data?.code;
 
-    // If error is 401 (Unauthorized) and we haven't retried already
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+      // ✅ TOKEN_EXPIRED = coba refresh
+      if (errorCode === "TOKEN_EXPIRED") {
+        // Cegah retry loop
+        if (originalRequest._retry) {
+          console.log("❌ Retry limit reached, redirecting to login");
+          safeRedirectToLogin();
+          return Promise.reject(error);
+        }
 
-      // If not already refreshing, try to refresh the token
-      if (!isRefreshing) {
+        originalRequest._retry = true;
+        console.log("ini refresh flag", isRefreshing);
+        // ✅ Jika sedang refresh, queue request ini
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({
+              resolve: (token) => {
+                resolve(axiosInstance(originalRequest));
+              },
+              reject: (err) => {
+                reject(err);
+              },
+            });
+          });
+        }
+
+        // ✅ Mulai refresh process
         isRefreshing = true;
 
         try {
-          // Get telegramId from localStorage
-          const telegramId = localStorage.getItem("telegramId");
+          console.log("🔄 Attempting token refresh...");
 
-          if (!telegramId) {
-            processQueue(new Error("No telegramId"), null);
-            safeRedirectToLogin();
-            return Promise.reject(error);
-          }
-
-          // ✅ Gunakan axios biasa untuk refresh token
-          const response = await axios.post(
-            `${API_URL}/login`,
+          await axios.post(
+            `${API_URL}/refresh`,
+            {},
             {
-              telegramId,
-            },
-            {
-              timeout: 5000, // ✅ Tambah timeout 5 detik
+              withCredentials: true,
+              timeout: 5000,
             }
           );
 
-          if (response.data?.token) {
-            localStorage.setItem("token", response.data.token);
-            originalRequest.headers.Authorization = `Bearer ${response.data.token}`;
+          console.log("✅ Token refreshed successfully");
 
-            // Process queued requests
-            processQueue(null, response.data.token);
+          // ✅ Process semua queued requests
+          processQueue(null, true);
 
-            // Retry original request
-            return axiosInstance(originalRequest);
-          } else {
-            throw new Error("No token received");
-          }
+          // ✅ Retry original request
+          return axiosInstance(originalRequest);
         } catch (refreshError) {
-          console.error("Token refresh failed:", refreshError);
+          console.error("❌ Token refresh failed:", refreshError.message);
 
-          // Process queued requests with error
+          // ✅ Reject semua queued requests
           processQueue(refreshError, null);
 
-          // Clear and redirect
+          // ✅ Redirect to login
           safeRedirectToLogin();
 
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;
         }
-      } else {
-        // If we're already refreshing, add request to queue
-        return new Promise((resolve, reject) => {
-          refreshQueue.push({
-            resolve: (token) => {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-              resolve(axiosInstance(originalRequest));
-            },
-            reject: (err) => {
-              reject(err);
-            },
-          });
-        });
       }
+
+      // ✅ 401 lainnya (NO_TOKEN, INVALID_TOKEN) = langsung redirect
+      console.log("🔒 Unauthorized access:", errorCode || "No code");
+      safeRedirectToLogin();
     }
 
     return Promise.reject(error);
