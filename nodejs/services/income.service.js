@@ -1,4 +1,5 @@
 const IncomeTracker = require("../models/income");
+const { createActivityLog } = require("./activity.service");
 
 const getIncomesService = async (userId) => {
   try {
@@ -9,7 +10,7 @@ const getIncomesService = async (userId) => {
   }
 };
 
-const createIncomeService = async (data, userId) => {
+const createIncomeService = async (data, userId, sourceIncome = "website") => {
   try {
     const { name, amount, source, notes, date } = data;
 
@@ -50,10 +51,32 @@ const createIncomeService = async (data, userId) => {
       source,
       notes: notes || "",
       date: date || new Date(),
-      // remainingAmount akan diset otomatis oleh middleware di model
+      sourceIncome,
     });
 
     const savedIncome = await newIncome.save();
+
+    // 🆕 Log activity
+    await createActivityLog({
+      userId,
+      telegramId: userId,
+      type: "income",
+      action: "create",
+      entityId: savedIncome._id,
+      entityName: name,
+      amount,
+      source,
+      notes,
+      description: `Pemasukan ${name} sebesar Rp ${amount.toLocaleString(
+        "id-ID"
+      )}`,
+      metadata: {
+        date: savedIncome.date,
+        remainingAmount: savedIncome.remainingAmount,
+      },
+      sourceUser: sourceIncome === "telegram" ? "Telegram Bot" : "Website",
+    });
+
     return savedIncome;
   } catch (error) {
     console.error("Error creating income:", error);
@@ -61,44 +84,64 @@ const createIncomeService = async (data, userId) => {
   }
 };
 
-const editIncomeService = async (data, incomeId, userId) => {
-  const { name, source, amount, notes, date } = data;
-  const income = await IncomeTracker.findById(incomeId);
+// ✅ FIXED - Parameter order: (incomeId, data, userId)
+const editIncomeService = async (incomeId, data, userId) => {
+  try {
+    const { name, source, amount, notes, date } = data;
 
-  if (!income) {
-    console.log("Income not found.");
-    return null;
-  }
+    const income = await IncomeTracker.findById(incomeId);
 
-  if (income.userId.toString() !== userId.toString()) {
-    console.log("You are not authorized to edit this income.");
-    return null;
-  }
+    if (!income) {
+      console.log("Income not found.");
+      return null;
+    }
 
-  return await IncomeTracker.findByIdAndUpdate(
-    incomeId,
-    {
+    if (income.userId.toString() !== userId.toString()) {
+      console.log("You are not authorized to edit this income.");
+      return null;
+    }
+
+    const updatedIncome = await IncomeTracker.findByIdAndUpdate(
+      incomeId,
+      {
+        userId,
+        name,
+        source,
+        amount,
+        notes,
+        date,
+      },
+      { new: true }
+    );
+
+    // 🆕 Log activity
+    await createActivityLog({
       userId,
-      name,
-      source,
-      amount,
-      notes,
-      date,
-    },
-    { new: true }
-  );
+      telegramId: userId,
+      type: "income",
+      action: "update",
+      entityId: updatedIncome._id,
+      entityName: updatedIncome.name,
+      amount: updatedIncome.amount,
+      source: updatedIncome.source,
+      notes: updatedIncome.notes,
+      description: `Pemasukan ${
+        updatedIncome.name
+      } diupdate menjadi Rp ${updatedIncome.amount.toLocaleString("id-ID")}`,
+      metadata: {
+        oldAmount: income.amount,
+        newAmount: updatedIncome.amount,
+        date: updatedIncome.date,
+      },
+      sourceUser: "Website",
+    });
+
+    return updatedIncome;
+  } catch (error) {
+    console.error("Error in editIncomeService:", error);
+    throw error;
+  }
 };
-
-// const deleteIncomeService = async (incomeId, userId) => {
-//   const income = await IncomeTracker.findOne({ _id: incomeId, userId });
-
-//   if (!income) {
-//     console.log("Income not found or you're not authorized to delete it.");
-//     return null;
-//   }
-
-//   return await IncomeTracker.findByIdAndDelete(incomeId);
-// };
 
 const deleteIncomeService = async (incomeId, userId) => {
   try {
@@ -117,6 +160,26 @@ const deleteIncomeService = async (incomeId, userId) => {
       console.log("Cannot delete income with related expenses.");
       return null;
     }
+
+    // 🆕 Log activity sebelum delete
+    await createActivityLog({
+      userId,
+      telegramId: userId,
+      type: "income",
+      action: "delete",
+      entityId: income._id,
+      entityName: income.name,
+      amount: income.amount,
+      source: income.source,
+      notes: income.notes,
+      description: `Pemasukan ${
+        income.name
+      } sebesar Rp ${income.amount.toLocaleString("id-ID")} dihapus`,
+      metadata: {
+        deletedAt: new Date(),
+      },
+      sourceUser: "Website",
+    });
 
     return await IncomeTracker.findByIdAndDelete(incomeId);
   } catch (error) {
