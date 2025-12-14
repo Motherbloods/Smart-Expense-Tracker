@@ -1,13 +1,19 @@
+const axios = require("axios");
 const { createExpenseService } = require("../services/expense.service");
-const { sendMessage } = require("../services/telegram.service");
+const {
+  sendMessage,
+  sendChatAction,
+  sendWaitingMessage,
+  editMessage,
+} = require("../services/telegram.service");
 const sessionCache = require("../utils/session-cache");
 const {
   capitalizeWords,
   extractAmount,
   cleanDescription,
 } = require("../utils/text-formatter");
-const { predictBatchCategories } = require("../services/classifier.service");
 const pusher = require("../utils/pusher");
+const { performance } = require("perf_hooks");
 
 const handleBatchExpenses = async (telegramId, inputText, res) => {
   const hasCommas = inputText.includes(",");
@@ -27,70 +33,120 @@ const handleBatchExpenses = async (telegramId, inputText, res) => {
     return;
   }
 
+  let waitingMessage = null;
+
   try {
-    const { predictions } = await predictBatchCategories(activities);
+    const startTime = performance.now();
+
+    await sendChatAction(telegramId, "typing");
+    waitingMessage = await sendWaitingMessage(telegramId);
+
+    const webhookUrl =
+      "https://n8n-ku.motherbloodss.site/webhook/8a9edca1-db89-4274-848d-a1174e8ede84";
+
+    const n8nResponse = await axios.post(webhookUrl, {
+      inputText: inputText,
+    });
+
+    console.log(`n8n batch response:`, n8nResponse.data);
+
+    let results = n8nResponse.data;
+
+    if (typeof results === "string") {
+      try {
+        let cleanData = results.trim();
+        if (cleanData.startsWith("=")) {
+          cleanData = cleanData.substring(1);
+        }
+        results = JSON.parse(cleanData);
+      } catch (parseError) {
+        console.error("Error parsing string response:", parseError);
+        throw new Error("Invalid response format from n8n");
+      }
+    }
+
+    if (!Array.isArray(results)) {
+      console.error("Results is not an array:", typeof results, results);
+      throw new Error("Invalid response format from n8n - not an array");
+    }
+
+    if (results.length === 0) {
+      console.error("Results array is empty");
+      throw new Error("Invalid response format from n8n - empty array");
+    }
+
+    console.log("Parsed results:", JSON.stringify(results, null, 2));
 
     let replyText = "📋 Hasil Klasifikasi Pengeluaran:\n\n";
     const recognizedExpenses = [];
     const lowConfidenceExpenses = [];
 
-    predictions.forEach((pred, index) => {
-      const { activity, category, confidence } = pred;
+    results.forEach((item, index) => {
+      const {
+        nama_pengeluaran,
+        nominal,
+        category,
+        confidence,
+        teks_asli,
+        confidence_level,
+      } = item;
 
       if (confidence > 0.8) {
         replyText += `${
           index + 1
-        }. "${activity}"\n   Kategori: ${category}\n   Keyakinan: ${(
+        }. "${teks_asli}"\n   Nama: ${teks_asli}\n   Jumlah: Rp ${nominal.toLocaleString(
+          "id-ID"
+        )}\n   Kategori: ${category}\n   Keyakinan: ${(
           confidence * 100
         ).toFixed(2)}%\n\n`;
 
-        const amount = extractAmount(activity);
-
-        const cleanedDescription = cleanDescription(activity);
-        const formattedDescription = capitalizeWords(cleanedDescription);
+        const formattedDescription = capitalizeWords(teks_asli);
         const formattedCategory =
           category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
 
-        // Store recognized expenses for database
+        // ✅ Tambahkan confidence di sini
         recognizedExpenses.push({
           name: formattedDescription,
-          amount: amount || 0,
+          amount: nominal,
           category: formattedCategory,
           date: new Date(),
+          confidence: confidence, // ✅ Simpan confidence
         });
       } else {
-        replyText += `${index + 1}. "${activity}"\n   ⚠️ Keyakinan rendah: ${(
-          confidence * 100
-        ).toFixed(2)}%\n   Prediksi: ${category}\n\n`;
+        replyText += `${
+          index + 1
+        }. "${teks_asli}"\n   Nama: ${teks_asli}\n   Jumlah: Rp ${nominal.toLocaleString(
+          "id-ID"
+        )}\n   ⚠️ Keyakinan rendah: ${(confidence * 100).toFixed(
+          2
+        )}%\n   Prediksi: ${category}\n\n`;
+
         lowConfidenceExpenses.push({
           index: index + 1,
-          activity,
+          activity: teks_asli,
+          name: teks_asli,
+          amount: nominal,
           prediction: category,
+          confidence: confidence, // ✅ Simpan confidence
         });
       }
     });
 
-    // Save recognized expenses to the database
     if (recognizedExpenses.length > 0) {
       try {
         for (const expenseData of recognizedExpenses) {
           await createExpenseService(expenseData, telegramId, "telegram");
+
+          pusher.trigger("expenses", "new-expense", {
+            telegramId,
+            expense: expenseData,
+          });
         }
-        pusher.trigger("expenses", "new-expense", {
-          telegramId,
-          expense: {
-            name: formattedDescription,
-            amount,
-            category: formattedCategory,
-            date: new Date(),
-          },
-        });
       } catch (dbError) {
         console.error("Error saving batch expenses to database:", dbError);
       }
     }
 
-    // Store low confidence expenses in session for correction
     if (lowConfidenceExpenses.length > 0) {
       sessionCache.set(telegramId, {
         batchMode: true,
@@ -110,14 +166,48 @@ const handleBatchExpenses = async (telegramId, inputText, res) => {
         'Ketik "/selesai" untuk mengakhiri koreksi atau "/batal" untuk membatalkan semua pengeluaran dengan keyakinan rendah.';
     }
 
-    await sendMessage(telegramId, replyText);
+    if (waitingMessage) {
+      const edited = await editMessage(
+        telegramId,
+        waitingMessage.message_id,
+        replyText
+      );
+      if (!edited) {
+        await sendMessage(telegramId, replyText);
+      }
+    } else {
+      await sendMessage(telegramId, replyText);
+    }
+
+    const endTime = performance.now();
+    const durationSeconds = ((endTime - startTime) / 1000).toFixed(3);
+    console.log(
+      `Batch expense classification for Telegram ID ${telegramId} took ${durationSeconds} seconds.`
+    );
+
     res.status(200).send("OK");
   } catch (error) {
     console.error("Error classifying batch expenses:", error);
-    await sendMessage(
-      telegramId,
-      "Maaf, terjadi kesalahan saat memproses pengeluaran batch Anda. Silakan coba lagi nanti."
-    );
+    console.error("Error stack:", error.stack);
+
+    if (waitingMessage) {
+      const edited = await editMessage(
+        telegramId,
+        waitingMessage.message_id,
+        "Maaf, terjadi kesalahan saat memproses pengeluaran batch Anda. Silakan coba lagi nanti."
+      );
+      if (!edited) {
+        await sendMessage(
+          telegramId,
+          "Maaf, terjadi kesalahan saat memproses pengeluaran batch Anda. Silakan coba lagi nanti."
+        );
+      }
+    } else {
+      await sendMessage(
+        telegramId,
+        "Maaf, terjadi kesalahan saat memproses pengeluaran batch Anda. Silakan coba lagi nanti."
+      );
+    }
 
     res.status(200).send("OK");
   }
