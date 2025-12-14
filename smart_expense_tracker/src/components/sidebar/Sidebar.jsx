@@ -57,13 +57,13 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
     const [isOpen, setIsOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
-    const [userRole, setUserRole] = useState('user'); // Default role
+    const [userRole, setUserRole] = useState('user');
     const [user, setUser] = useState(null);
     const telegramId = localStorage.getItem("telegramId");
 
-    // ✅ Get user role from localStorage
+    // ✅ Get user role from localStorage (userData, bukan user)
     useEffect(() => {
-        const storedUser = localStorage.getItem("user");
+        const storedUser = localStorage.getItem("userData");
         if (storedUser) {
             try {
                 const userData = JSON.parse(storedUser);
@@ -96,7 +96,6 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
                 }
             ];
         } else {
-            // role === 'user'
             return [
                 {
                     id: 'dashboard',
@@ -132,7 +131,7 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
         }
     }, [onPageChange]);
 
-    // ✅ Logout handler
+    // ✅ Logout handler - akan clear cookies di backend
     const handleLogout = useCallback(async () => {
         if (isLoggingOut) {
             console.log("Already logging out...");
@@ -144,14 +143,18 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
         try {
             setIsOpen(false);
 
+            // ✅ Import dan panggil logoutUser (akan hit /logout endpoint)
             const { logoutUser } = await import('../../api/loginService');
             await logoutUser(telegramId);
 
+            // ✅ Redirect ke login (cookies sudah di-clear di backend)
             window.location.href = "/login";
 
         } catch (error) {
             console.error("Logout error:", error);
-            localStorage.clear();
+            // ✅ Fallback: clear local data dan redirect
+            localStorage.removeItem("telegramId");
+            localStorage.removeItem("userData");
             window.location.href = "/login";
         }
     }, [isLoggingOut, telegramId]);
@@ -237,7 +240,7 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
                         </ul>
 
                         {/* ✅ Logout Button */}
-                        <div className=" border-t border-gray-200">
+                        <div className="mt-4 pt-4 border-t border-gray-200">
                             <button
                                 onClick={handleLogout}
                                 disabled={isLoggingOut}
@@ -282,11 +285,11 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
                                 <div className="flex items-start gap-3">
                                     <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
                                         <span className="text-white font-bold">
-                                            {userRole === 'admin' ? 'A' : 'H'}
+                                            {user?.username?.charAt(0)?.toUpperCase() || (userRole === 'admin' ? 'A' : 'U')}
                                         </span>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-gray-800 truncate">{user?.username}</p>
+                                        <p className="font-semibold text-gray-800 truncate">{user?.username || 'User'}</p>
                                         <p className="text-xs text-gray-500 truncate">
                                             {userRole === 'admin' ? 'Administrator' : 'User'}
                                         </p>
@@ -297,7 +300,7 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
                             <div className="flex justify-center">
                                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
                                     <span className="text-white font-bold">
-                                        {userRole === 'admin' ? 'A' : 'U'}
+                                        {user?.username?.charAt(0)?.toUpperCase() || (userRole === 'admin' ? 'A' : 'U')}
                                     </span>
                                 </div>
                             </div>

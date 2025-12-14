@@ -2,13 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '../components/sidebar/Sidebar';
 import { toast } from 'react-toastify';
 import useNavigation from '../hooks/useNavigation';
+import { getActivities } from '../api/activityService';
+import { invalidateActivityCache } from '../api/activityService';
 
 function AktivitasPengguna() {
     const [activities, setActivities] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedActivity, setSelectedActivity] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
-    const [filterType, setFilterType] = useState('all'); // all, expense, income
+    const [filterType, setFilterType] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
 
@@ -18,177 +20,37 @@ function AktivitasPengguna() {
 
     const telegramId = localStorage.getItem("telegramId");
 
-    // Fetch activities dari backend
-    const fetchActivities = useCallback(async () => {
+    // Fetch activities dari backend dengan filter
+    const fetchActivities = useCallback(async (forceRefresh = false) => {
         if (isLoading) return;
 
         setIsLoading(true);
         try {
-            // TODO: Ganti dengan API call yang sebenarnya
-            // const response = await getActivities();
-            // setActivities(response.data.data);
+            // Invalidate cache jika force refresh
+            if (forceRefresh) {
+                invalidateActivityCache();
+            }
 
-            // Simulasi data sementara - nanti diganti dengan API call
-            const mockActivities = [
-                {
-                    _id: '1',
-                    type: 'expense',
-                    action: 'create',
-                    name: 'Belanja Bulanan',
-                    category: 'Kebutuhan Pokok',
-                    amount: 500000,
-                    date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-                    telegramId: '123456789',
-                    userName: 'Habib Risky K',
-                    user: 'Telegram Bot',
-                    description: 'Belanja kebutuhan pokok di supermarket'
-                },
-                {
-                    _id: '2',
-                    type: 'income',
-                    action: 'create',
-                    name: 'Gaji Bulan Ini',
-                    source: 'Gaji',
-                    amount: 5000000,
-                    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-                    telegramId: '987654321',
-                    userName: 'Irfan Nur S',
-                    user: 'Telegram Bot',
-                    notes: 'Gaji bulanan dari kantor'
-                },
-                {
-                    _id: '3',
-                    type: 'expense',
-                    action: 'update',
-                    name: 'Listrik',
-                    category: 'Tagihan',
-                    amount: 250000,
-                    date: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-                    telegramId: '123456789',
-                    userName: 'Habib Risky K',
-                    user: 'Telegram Bot',
-                    description: 'Update tagihan listrik bulan ini'
-                },
-                {
-                    _id: '4',
-                    type: 'income',
-                    action: 'create',
-                    name: 'Freelance Project',
-                    source: 'Freelance',
-                    amount: 2000000,
-                    date: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-                    telegramId: '555123456',
-                    userName: 'Bramzz',
-                    user: 'Telegram Bot',
-                    notes: 'Project dari klien web development'
-                },
-                {
-                    _id: '5',
-                    type: 'expense',
-                    action: 'create',
-                    name: 'Bensin',
-                    category: 'Transportasi',
-                    amount: 150000,
-                    date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-                    telegramId: '987654321',
-                    userName: 'Irfan Nur S',
-                    user: 'Telegram Bot',
-                    description: 'Isi bensin motor'
-                },
-                {
-                    _id: '6',
-                    type: 'expense',
-                    action: 'delete',
-                    name: 'Kopi Kalisuci',
-                    category: 'Hiburan',
-                    amount: 50000,
-                    date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-                    telegramId: '555123456',
-                    userName: 'Bramzz',
-                    user: 'Telegram Bot',
-                    description: 'Pembelian dihapus'
-                },
-                {
-                    _id: '7',
-                    type: 'expense',
-                    action: 'create',
-                    name: 'Makan Siang',
-                    category: 'Makanan',
-                    amount: 75000,
-                    date: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-                    telegramId: '666789012',
-                    userName: 'Wawannnz',
-                    user: 'Telegram Bot',
-                    description: 'Makan siang di restoran'
-                },
-                {
-                    _id: '8',
-                    type: 'income',
-                    action: 'update',
-                    name: 'Bonus Kinerja',
-                    source: 'Bonus',
-                    amount: 1500000,
-                    date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-                    telegramId: '123456789',
-                    userName: 'Habib Risky K',
-                    user: 'Telegram Bot',
-                    notes: 'Update bonus kinerja bulan Januari'
-                },
-                {
-                    _id: '9',
-                    type: 'expense',
-                    action: 'create',
-                    name: 'Internet',
-                    category: 'Tagihan',
-                    amount: 300000,
-                    date: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-                    telegramId: '987654321',
-                    userName: 'Irfan Nur S',
-                    user: 'Telegram Bot',
-                    description: 'Tagihan internet bulanan'
-                },
-                {
-                    _id: '10',
-                    type: 'expense',
-                    action: 'create',
-                    name: 'Obat-obatan',
-                    category: 'Kesehatan',
-                    amount: 125000,
-                    date: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-                    telegramId: '666789012',
-                    userName: 'Wawannnz',
-                    user: 'Telegram Bot',
-                    description: 'Beli obat di apotek'
-                },
-                {
-                    _id: '11',
-                    type: 'income',
-                    action: 'create',
-                    name: 'Royalti Ebook',
-                    source: 'Royalti',
-                    amount: 850000,
-                    date: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-                    telegramId: '555123456',
-                    userName: 'Bramzz',
-                    user: 'Telegram Bot',
-                    notes: 'Royalti dari penjualan ebook'
-                },
-                {
-                    _id: '12',
-                    type: 'expense',
-                    action: 'update',
-                    name: 'Asuransi Mobil',
-                    category: 'Transportasi',
-                    amount: 800000,
-                    date: new Date().toISOString(),
-                    telegramId: '666789012',
-                    userName: 'Wawannnz',
-                    user: 'Telegram Bot',
-                    description: 'Update asuransi mobil tahun ini'
+            const filters = {
+                type: filterType,
+                search: searchQuery,
+                limit: 100,
+            };
+
+            const response = await getActivities(filters);
+            console.log("🔥 Activities fetched:", response.data);
+
+            if (response.data.success) {
+                setActivities(response.data.data);
+                setLastRefreshTime(Date.now());
+
+                if (forceRefresh) {
+                    toast.success("Aktivitas berhasil diperbarui", {
+                        position: "top-right",
+                        autoClose: 2000,
+                    });
                 }
-            ];
-            setActivities(mockActivities);
-            setLastRefreshTime(Date.now());
+            }
         } catch (error) {
             console.error("Error fetching activities:", error);
             toast.error("Gagal memuat aktivitas", {
@@ -198,14 +60,25 @@ function AktivitasPengguna() {
         } finally {
             setIsLoading(false);
         }
-    }, [telegramId, isLoading]);
+    }, [filterType, searchQuery, isLoading]);
 
     // Initial fetch
     useEffect(() => {
         if (telegramId) {
             fetchActivities();
         }
-    }, [telegramId, fetchActivities]);
+    }, [telegramId, filterType]);
+
+    // Debounce search query
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (telegramId) {
+                fetchActivities();
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     // Pusher Integration untuk Real-time Updates
     useEffect(() => {
@@ -218,29 +91,11 @@ function AktivitasPengguna() {
         // Handler untuk expense yang ditambahkan
         channel.bind(import.meta.env.VITE_PUSHER_BIND, (data) => {
             if (data && data.expense && data.telegramId === telegramId) {
-                const newActivity = {
-                    _id: data.expense._id || `temp-${Date.now()}`,
-                    type: 'expense',
-                    action: 'create',
-                    name: data.expense.name,
-                    category: data.expense.category,
-                    amount: data.expense.amount,
-                    date: data.expense.date,
-                    telegramId: data.telegramId,
-                    user: 'Telegram Bot',
-                    description: 'Transaksi ditambahkan melalui Telegram'
-                };
+                fetchActivities();
 
-                setActivities(prev => {
-                    const exists = prev.some(act => act._id === newActivity._id);
-                    if (!exists) {
-                        toast.success(`💸 Pengeluaran baru: ${newActivity.name}`, {
-                            position: "top-right",
-                            autoClose: 3000,
-                        });
-                        return [newActivity, ...prev];
-                    }
-                    return prev;
+                toast.success(`💸 Pengeluaran baru: ${data.expense.name}`, {
+                    position: "top-right",
+                    autoClose: 3000,
                 });
             }
         });
@@ -248,29 +103,11 @@ function AktivitasPengguna() {
         // Handler untuk income yang ditambahkan
         channel.bind('income-added', (data) => {
             if (data && data.income && data.telegramId === telegramId) {
-                const newActivity = {
-                    _id: data.income._id || `temp-${Date.now()}`,
-                    type: 'income',
-                    action: 'create',
-                    name: data.income.name,
-                    source: data.income.source,
-                    amount: data.income.amount,
-                    date: data.income.date,
-                    telegramId: data.telegramId,
-                    user: 'Telegram Bot',
-                    notes: data.income.notes || 'Transaksi ditambahkan melalui Telegram'
-                };
+                fetchActivities();
 
-                setActivities(prev => {
-                    const exists = prev.some(act => act._id === newActivity._id);
-                    if (!exists) {
-                        toast.success(`💰 Pemasukan baru: ${newActivity.name}`, {
-                            position: "top-right",
-                            autoClose: 3000,
-                        });
-                        return [newActivity, ...prev];
-                    }
-                    return prev;
+                toast.success(`💰 Pemasukan baru: ${data.income.name}`, {
+                    position: "top-right",
+                    autoClose: 3000,
                 });
             }
         });
@@ -278,22 +115,9 @@ function AktivitasPengguna() {
         // Handler untuk expense yang diupdate
         channel.bind('expense-updated', (data) => {
             if (data && data.expense && data.telegramId === telegramId) {
-                const updatedActivity = {
-                    _id: data.expense._id,
-                    type: 'expense',
-                    action: 'update',
-                    name: data.expense.name,
-                    category: data.expense.category,
-                    amount: data.expense.amount,
-                    date: data.expense.date,
-                    telegramId: data.telegramId,
-                    user: 'Telegram Bot',
-                    description: 'Transaksi diupdate melalui Telegram'
-                };
+                fetchActivities();
 
-                setActivities(prev => [updatedActivity, ...prev]);
-
-                toast.info(`✏️ Pengeluaran diupdate: ${updatedActivity.name}`, {
+                toast.info(`✏️ Pengeluaran diupdate: ${data.expense.name}`, {
                     position: "top-right",
                     autoClose: 3000,
                 });
@@ -303,22 +127,9 @@ function AktivitasPengguna() {
         // Handler untuk income yang diupdate
         channel.bind('income-updated', (data) => {
             if (data && data.income && data.telegramId === telegramId) {
-                const updatedActivity = {
-                    _id: data.income._id,
-                    type: 'income',
-                    action: 'update',
-                    name: data.income.name,
-                    source: data.income.source,
-                    amount: data.income.amount,
-                    date: data.income.date,
-                    telegramId: data.telegramId,
-                    user: 'Telegram Bot',
-                    notes: data.income.notes || 'Transaksi diupdate melalui Telegram'
-                };
+                fetchActivities();
 
-                setActivities(prev => [updatedActivity, ...prev]);
-
-                toast.info(`✏️ Pemasukan diupdate: ${updatedActivity.name}`, {
+                toast.info(`✏️ Pemasukan diupdate: ${data.income.name}`, {
                     position: "top-right",
                     autoClose: 3000,
                 });
@@ -328,22 +139,9 @@ function AktivitasPengguna() {
         // Handler untuk expense yang dihapus
         channel.bind('expense-deleted', (data) => {
             if (data && data.expenseId && data.telegramId === telegramId) {
-                const deletedActivity = {
-                    _id: `deleted-${Date.now()}`,
-                    type: 'expense',
-                    action: 'delete',
-                    name: data.expenseName || 'Pengeluaran',
-                    category: data.category || '-',
-                    amount: data.amount || 0,
-                    date: new Date().toISOString(),
-                    telegramId: data.telegramId,
-                    user: 'Telegram Bot',
-                    description: 'Transaksi dihapus melalui Telegram'
-                };
+                fetchActivities();
 
-                setActivities(prev => [deletedActivity, ...prev]);
-
-                toast.warning(`🗑️ Pengeluaran dihapus: ${deletedActivity.name}`, {
+                toast.warning(`🗑️ Pengeluaran dihapus: ${data.expenseName || 'Transaksi'}`, {
                     position: "top-right",
                     autoClose: 3000,
                 });
@@ -353,22 +151,9 @@ function AktivitasPengguna() {
         // Handler untuk income yang dihapus
         channel.bind('income-deleted', (data) => {
             if (data && data.incomeId && data.telegramId === telegramId) {
-                const deletedActivity = {
-                    _id: `deleted-${Date.now()}`,
-                    type: 'income',
-                    action: 'delete',
-                    name: data.incomeName || 'Pemasukan',
-                    source: data.source || '-',
-                    amount: data.amount || 0,
-                    date: new Date().toISOString(),
-                    telegramId: data.telegramId,
-                    user: 'Telegram Bot',
-                    notes: 'Transaksi dihapus melalui Telegram'
-                };
+                fetchActivities();
 
-                setActivities(prev => [deletedActivity, ...prev]);
-
-                toast.warning(`🗑️ Pemasukan dihapus: ${deletedActivity.name}`, {
+                toast.warning(`🗑️ Pemasukan dihapus: ${data.incomeName || 'Transaksi'}`, {
                     position: "top-right",
                     autoClose: 3000,
                 });
@@ -379,7 +164,7 @@ function AktivitasPengguna() {
             channel.unbind_all();
             channel.unsubscribe();
         };
-    }, [telegramId]);
+    }, [telegramId, fetchActivities]);
 
     // Refresh data when app visibility changes
     useEffect(() => {
@@ -388,7 +173,7 @@ function AktivitasPengguna() {
                 const timeSinceLastRefresh = Date.now() - lastRefreshTime;
                 if (timeSinceLastRefresh > 5 * 60 * 1000) {
                     console.log('App became visible, refreshing activities...');
-                    fetchActivities();
+                    fetchActivities(true);
                 }
             }
         };
@@ -397,7 +182,7 @@ function AktivitasPengguna() {
             const timeSinceLastRefresh = Date.now() - lastRefreshTime;
             if (timeSinceLastRefresh > 5 * 60 * 1000) {
                 console.log('Window focused, refreshing activities...');
-                fetchActivities();
+                fetchActivities(true);
             }
         };
 
@@ -479,14 +264,6 @@ function AktivitasPengguna() {
         setShowDetailModal(true);
     };
 
-    const filteredActivities = activities.filter(activity => {
-        const matchesType = filterType === 'all' || activity.type === filterType;
-        const matchesSearch = activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (activity.category && activity.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (activity.source && activity.source.toLowerCase().includes(searchQuery.toLowerCase()));
-        return matchesType && matchesSearch;
-    });
-
     return (
         <div className="flex">
             <Sidebar
@@ -509,7 +286,7 @@ function AktivitasPengguna() {
                             </div>
                             <div className="flex gap-3">
                                 <button
-                                    onClick={fetchActivities}
+                                    onClick={() => fetchActivities(true)}
                                     disabled={isLoading}
                                     className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-70"
                                 >
@@ -598,7 +375,7 @@ function AktivitasPengguna() {
                             <div className="flex items-center justify-center py-20">
                                 <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                             </div>
-                        ) : filteredActivities.length === 0 ? (
+                        ) : activities.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 text-gray-500">
                                 <svg className="w-20 h-20 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -608,7 +385,7 @@ function AktivitasPengguna() {
                             </div>
                         ) : (
                             <div className="divide-y divide-gray-100">
-                                {filteredActivities.map((activity) => (
+                                {activities.map((activity) => (
                                     <div
                                         key={activity._id}
                                         className="p-6 hover:bg-gray-50 transition-colors duration-200"
@@ -623,9 +400,9 @@ function AktivitasPengguna() {
                                                         {activity.action.toUpperCase()}
                                                     </span>
                                                     <span className="text-sm text-gray-500">
-                                                        {formatDate(activity.date)}
+                                                        {formatDate(activity.createdAt)}
                                                     </span>
-                                                    {activity.user === 'Telegram Bot' && (
+                                                    {activity.sourceUser === 'Telegram Bot' && (
                                                         <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                                                             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                                                                 <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121L7.945 13.56l-2.936-.918c-.638-.197-.658-.637.135-.943l11.49-4.43c.529-.176.995.12.823.943z" />
@@ -636,7 +413,7 @@ function AktivitasPengguna() {
                                                 </div>
 
                                                 <h3 className="text-lg font-bold text-gray-800 mb-1">
-                                                    {activity.name}
+                                                    {activity.entityName}
                                                 </h3>
                                                 <p className="text-sm text-gray-500 mb-2">
                                                     👤 {activity.userName}
@@ -727,7 +504,7 @@ function AktivitasPengguna() {
 
                                     <div className="p-4 bg-gray-50 rounded-xl">
                                         <p className="text-sm text-gray-600 mb-1">Nama Transaksi</p>
-                                        <p className="text-lg font-semibold text-gray-800">{selectedActivity.name}</p>
+                                        <p className="text-lg font-semibold text-gray-800">{selectedActivity.entityName}</p>
                                     </div>
 
                                     {selectedActivity.category && (
@@ -746,13 +523,13 @@ function AktivitasPengguna() {
 
                                     <div className="p-4 bg-gray-50 rounded-xl">
                                         <p className="text-sm text-gray-600 mb-1">Waktu</p>
-                                        <p className="text-lg font-semibold text-gray-800">{formatDate(selectedActivity.date)}</p>
+                                        <p className="text-lg font-semibold text-gray-800">{formatDate(selectedActivity.createdAt)}</p>
                                     </div>
 
                                     <div className="p-4 bg-gray-50 rounded-xl">
                                         <p className="text-sm text-gray-600 mb-1">Sumber Transaksi</p>
                                         <div className="flex items-center gap-2">
-                                            {selectedActivity.user === 'Telegram Bot' ? (
+                                            {selectedActivity.sourceUser === 'Telegram Bot' ? (
                                                 <>
                                                     <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
                                                         <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121L7.945 13.56l-2.936-.918c-.638-.197-.658-.637.135-.943l11.49-4.43c.529-.176.995.12.823.943z" />
@@ -764,7 +541,7 @@ function AktivitasPengguna() {
                                                     <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                                                     </svg>
-                                                    <span className="text-lg font-semibold text-gray-800">{selectedActivity.user}</span>
+                                                    <span className="text-lg font-semibold text-gray-800">{selectedActivity.sourceUser}</span>
                                                 </>
                                             )}
                                         </div>
