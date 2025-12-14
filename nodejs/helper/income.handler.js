@@ -85,7 +85,11 @@ const handleIncomeCommand = async (telegramId, inputText, res) => {
     };
 
     // Simpan pemasukan
-    const savedIncome = await createIncomeService(incomeData, telegramId);
+    const savedIncome = await createIncomeService(
+      incomeData,
+      telegramId,
+      "telegram"
+    );
 
     if (!savedIncome) {
       await sendMessage(
