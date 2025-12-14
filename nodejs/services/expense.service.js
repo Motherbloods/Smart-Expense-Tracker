@@ -1,9 +1,12 @@
 const ExpenseTracker = require("../models/expense");
 const Income = require("../models/income");
+const { createActivityLog } = require("./activity.service");
 
 const getExpensesService = async (userId) => {
   try {
-    return await ExpenseTracker.find({ userId }).populate("incomeId", "name");
+    return await ExpenseTracker.find({ userId })
+      .populate("incomeId", "name")
+      .sort({ date: -1, createdAt: -1 });
   } catch (e) {
     console.log("Error fetching expenses");
     return [];
@@ -11,10 +14,9 @@ const getExpensesService = async (userId) => {
 };
 
 const createExpenseService = async (data, userId, source = "website") => {
-  const { name, amount, category, date, sourceIncomeId } = data;
-  console.log("📥 Input Data:", data);
+  const { name, amount, category, date, sourceIncomeId, confidence } = data; // ✅ Tambahkan confidence
+  console.log("🔥 Input Data:", data);
 
-  // Jika sourceIncomeId tidak disediakan, cari income pertama yang tersedia
   let incomeId = sourceIncomeId;
   if (!incomeId) {
     console.log("🔍 Mencari income yang tersedia...");
@@ -42,7 +44,6 @@ const createExpenseService = async (data, userId, source = "website") => {
     console.log("👉 Menggunakan incomeId dari request:", incomeId);
   }
 
-  // Validasi field
   if (!name || !amount || !category || !date) {
     console.log("⚠️ Field wajib kosong:", { name, amount, category, date });
     return null;
@@ -53,7 +54,6 @@ const createExpenseService = async (data, userId, source = "website") => {
     return null;
   }
 
-  // Cari income
   console.log("🔍 Cari income berdasarkan incomeId:", incomeId);
   const income = await Income.findById(incomeId);
   if (!income) {
@@ -79,7 +79,6 @@ const createExpenseService = async (data, userId, source = "website") => {
     return null;
   }
 
-  // Update remaining amount
   console.log(
     "✏️ Update sisa income:",
     income.remainingAmount,
@@ -90,7 +89,7 @@ const createExpenseService = async (data, userId, source = "website") => {
   await income.save();
   console.log("✅ Income berhasil diupdate.");
 
-  // Simpan expense
+  // ✅ Simpan expense dengan confidence
   const newExpense = new ExpenseTracker({
     userId: userId,
     name,
@@ -99,6 +98,7 @@ const createExpenseService = async (data, userId, source = "website") => {
     date,
     incomeId: incomeId,
     source,
+    confidence: confidence !== undefined ? confidence : 1, // ✅ Default 1 jika tidak ada
   });
 
   let savedExpense = await newExpense.save();
@@ -106,80 +106,82 @@ const createExpenseService = async (data, userId, source = "website") => {
 
   savedExpense = await savedExpense.populate("incomeId", "name");
 
+  await createActivityLog({
+    userId,
+    telegramId: userId,
+    type: "expense",
+    action: "create",
+    entityId: savedExpense._id,
+    entityName: name,
+    amount,
+    category,
+    description: `Pengeluaran ${name} sebesar Rp ${amount.toLocaleString(
+      "id-ID"
+    )}`,
+    metadata: {
+      incomeSource: income.name,
+      date,
+      confidence: confidence, // ✅ Tambahkan ke metadata
+    },
+    sourceUser: source === "telegram" ? "Telegram Bot" : "Website",
+  });
+
   return savedExpense;
 };
 
 const editExpenseService = async (data, expenseId, userId) => {
-  const { name, amount, category, date, sourceIncomeId } = data;
+  const { name, amount, category, date, sourceIncomeId, confidence } = data; // ✅ Tambahkan confidence
   const expense = await ExpenseTracker.findById(expenseId);
-
   if (!expense) {
     console.log("Expense not found.");
     return null;
   }
-
   if (expense.userId.toString() !== userId.toString()) {
     console.log("You are not authorized to edit this expense.");
     return null;
   }
-
   const oldAmount = expense.amount;
   const oldIncomeId = expense.incomeId;
   const newAmount = amount || oldAmount;
   const newIncomeId = sourceIncomeId || oldIncomeId;
 
-  // Jika income ID berubah
   if (oldIncomeId.toString() !== newIncomeId.toString()) {
-    // Kembalikan amount ke income lama
     const oldIncome = await Income.findById(oldIncomeId);
     if (oldIncome) {
       oldIncome.remainingAmount += oldAmount;
       await oldIncome.save();
     }
-
-    // Kurangi amount dari income baru
     const newIncome = await Income.findById(newIncomeId);
     if (!newIncome) {
       console.log("New income source not found");
       return null;
     }
-
     if (newIncome.remainingAmount < newAmount) {
       console.log("Not enough remaining amount in the new income source.");
-      // Kembalikan amount ke income lama karena transaksi gagal
       if (oldIncome) {
         oldIncome.remainingAmount -= oldAmount;
         await oldIncome.save();
       }
       return null;
     }
-
     newIncome.remainingAmount -= newAmount;
     await newIncome.save();
-  }
-  // Jika income ID sama tapi amount berubah
-  else if (oldAmount !== newAmount) {
+  } else if (oldAmount !== newAmount) {
     const income = await Income.findById(oldIncomeId);
     if (!income) {
       console.log("Income source not found");
       return null;
     }
-
-    // Hitung selisih amount
     const amountDifference = newAmount - oldAmount;
-
-    // Cek apakah saldo mencukupi jika amount bertambah
     if (amountDifference > 0 && income.remainingAmount < amountDifference) {
       console.log("Not enough remaining amount for the increased expense.");
       return null;
     }
-
-    // Update remaining amount
     income.remainingAmount -= amountDifference;
     await income.save();
   }
 
-  // Update expense
+  // ✅ Update expense dengan confidence
   const updatedExpense = await ExpenseTracker.findByIdAndUpdate(
     expenseId,
     {
@@ -189,11 +191,39 @@ const editExpenseService = async (data, expenseId, userId) => {
       category: category || expense.category,
       date: date || expense.date,
       incomeId: newIncomeId,
+      confidence: confidence !== undefined ? confidence : expense.confidence, // ✅ Update confidence jika ada
     },
     { new: true }
   );
 
-  return updatedExpense;
+  const newIncome = await Income.findById(newIncomeId);
+  const sourceIncomeName = newIncome ? newIncome.name : null;
+
+  await createActivityLog({
+    userId,
+    telegramId: userId,
+    type: "expense",
+    action: "update",
+    entityId: updatedExpense._id,
+    entityName: updatedExpense.name,
+    amount: newAmount,
+    category: updatedExpense.category,
+    description: `Pengeluaran ${
+      updatedExpense.name
+    } diupdate menjadi Rp ${newAmount.toLocaleString("id-ID")}`,
+    metadata: {
+      oldAmount,
+      newAmount,
+      date: updatedExpense.date,
+      confidence: updatedExpense.confidence, // ✅ Tambahkan ke metadata
+    },
+    sourceUser: "Website",
+  });
+
+  return {
+    ...updatedExpense.toObject(),
+    sourceIncomeName,
+  };
 };
 
 const deleteExpenseService = async (expenseId, userId) => {
@@ -204,12 +234,30 @@ const deleteExpenseService = async (expenseId, userId) => {
     return null;
   }
 
-  // Kembalikan amount ke income source saat delete
   const income = await Income.findById(expense.incomeId);
   if (income) {
     income.remainingAmount += expense.amount;
     await income.save();
   }
+
+  await createActivityLog({
+    userId,
+    telegramId: userId,
+    type: "expense",
+    action: "delete",
+    entityId: expense._id,
+    entityName: expense.name,
+    amount: expense.amount,
+    category: expense.category,
+    description: `Pengeluaran ${
+      expense.name
+    } sebesar Rp ${expense.amount.toLocaleString("id-ID")} dihapus`,
+    metadata: {
+      deletedAt: new Date(),
+      confidence: expense.confidence, // ✅ Tambahkan ke metadata
+    },
+    sourceUser: "Website",
+  });
 
   return await ExpenseTracker.findByIdAndDelete(expenseId);
 };
