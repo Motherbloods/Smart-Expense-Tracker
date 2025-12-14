@@ -268,15 +268,33 @@ function Dashboard() {
     const onAddIncome = async (newIncome) => {
         try {
             setIsLoading(true);
-            const response = await createIncome(newIncome);
 
-            if (response.data && response.data.data) {
-                setIncomes((prev) => [response.data.data, ...prev]);
+            console.log("📝 Adding new income:", newIncome);
+
+            const response = await createIncome(newIncome, telegramId);
+
+            console.log("Response from createIncome:", response);
+
+            // ✅ Check response structure (bisa response.data.data atau response.data)
+            const newIncomeData = response?.data?.data || response?.data;
+
+            if (newIncomeData) {
+                // ✅ Add new income to the top of the list
+                setIncomes((prev) => [newIncomeData, ...prev]);
+
+                // ✅ Invalidate cache
                 apiCache.invalidate(`incomes_${telegramId}`);
+
+                console.log("✅ Income added successfully to state");
+            } else {
+                throw new Error("No data returned from server");
             }
         } catch (error) {
             console.error("Error adding income:", error);
-            toast.error("Gagal menambahkan pemasukan");
+            toast.error("❌ Gagal menambahkan pemasukan", {
+                position: "top-right",
+                autoClose: 3000,
+            });
         } finally {
             setIsLoading(false);
         }
@@ -286,19 +304,48 @@ function Dashboard() {
         try {
             setIsLoading(true);
             const { id, ...incomeData } = updatedIncome;
-            const response = await editIncome(incomeData, id);
 
-            if (response.data && response.data.data) {
+            console.log("📝 Updating income with correct params:", {
+                incomeId: id,
+                incomeData,
+                telegramId
+            });
+
+            // ✅ BENAR - Parameter order: (incomeId, incomeData, telegramId)
+            const response = await editIncome(id, incomeData, telegramId);
+
+            console.log("Response from editIncome:", response);
+
+            // ✅ Check response structure (response.data or response)
+            const updatedData = response?.data?.data || response?.data;
+
+            if (updatedData) {
+                // ✅ Update state dengan data baru
                 setIncomes((prev) =>
                     prev.map((income) =>
-                        income._id === id ? response.data.data : income
+                        income._id === id ? updatedData : income
                     )
                 );
+
+                // ✅ Invalidate cache
                 apiCache.invalidate(`incomes_${telegramId}`);
+
+                // ✅ Show success toast
+                toast.success("✅ Pemasukan berhasil diperbarui", {
+                    position: "top-right",
+                    autoClose: 3000,
+                });
+
+                console.log("✅ Income updated successfully in state");
+            } else {
+                throw new Error("No data returned from server");
             }
         } catch (error) {
             console.error("Error updating income:", error);
-            toast.error("Gagal memperbarui pemasukan");
+            toast.error("❌ Gagal memperbarui pemasukan", {
+                position: "top-right",
+                autoClose: 3000,
+            });
         } finally {
             setIsLoading(false);
         }
@@ -307,7 +354,7 @@ function Dashboard() {
     const onDeleteIncome = async (id) => {
         try {
             setIsLoading(true);
-            const response = await deleteIncome(id);
+            const response = await deleteIncome(id, telegramId);
 
             if (response.data && response.data.success) {
                 setIncomes((prev) => prev.filter((income) => income._id !== id));
@@ -316,7 +363,20 @@ function Dashboard() {
             }
         } catch (error) {
             console.error("Error deleting income:", error);
-            toast.error("❌ Gagal menghapus pemasukan");
+
+            // ✅ Handle error 400 (income sudah digunakan)
+            if (error.response && error.response.status === 400) {
+                const errorMessage = error.response.data?.message ||
+                    "Income tidak bisa dihapus karena sudah dipakai pada pengeluaran";
+
+                toast.warning(errorMessage, {
+                    position: "top-right",
+                    autoClose: 5000,
+                });
+            } else {
+                // Error lainnya (network, 500, dll)
+                toast.error("❌ Gagal menghapus pemasukan. Silakan coba lagi.");
+            }
         } finally {
             setIsLoading(false);
         }
