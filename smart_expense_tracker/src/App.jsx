@@ -3,6 +3,7 @@ import { lazy, Suspense } from "react";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useEffect } from "react";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Login = lazy(() => import("./pages/Login"));
@@ -23,9 +24,9 @@ const PageLoader = () => (
 const NotFound = () => {
   const getUserRole = () => {
     try {
-      const user = localStorage.getItem("user");
-      if (user) {
-        return JSON.parse(user).role || 'user';
+      const userData = localStorage.getItem("userData");
+      if (userData) {
+        return JSON.parse(userData).role || 'user';
       }
     } catch (error) {
       console.error("Error parsing user:", error);
@@ -34,7 +35,8 @@ const NotFound = () => {
   };
 
   const role = getUserRole();
-  const isAuthenticated = localStorage.getItem("token") && localStorage.getItem("telegramId");
+  // ✅ Cek auth hanya dari telegramId (token ada di cookies)
+  const isAuthenticated = localStorage.getItem("telegramId");
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -48,6 +50,11 @@ const NotFound = () => {
 };
 
 function App() {
+  useEffect(() => {
+    console.log("🔍 App mounted");
+    console.log("telegramId:", localStorage.getItem("telegramId"));
+    console.log("userData:", localStorage.getItem("userData"));
+  }, []);
   return (
     <Router>
       <Suspense fallback={<PageLoader />}>
@@ -56,7 +63,7 @@ function App() {
           <Route
             path="/login"
             element={
-              !localStorage.getItem("token") ? (
+              !localStorage.getItem("telegramId") ? (
                 <Login />
               ) : (
                 <NotFound />

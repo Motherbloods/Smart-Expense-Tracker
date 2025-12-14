@@ -1,8 +1,7 @@
 const { google } = require("googleapis");
 const { capitalizeWords } = require("./text-formatter");
 
-const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-credentials.private_key = credentials.private_key.replace(/\\n/g, "\n");
+const credentials = "../credentials.json";
 
 const auth = new google.auth.GoogleAuth({
   credentials,

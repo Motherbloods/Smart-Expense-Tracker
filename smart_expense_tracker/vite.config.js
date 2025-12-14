@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
+import path from "path";
 
 export default defineConfig({
   plugins: [
@@ -33,6 +34,15 @@ export default defineConfig({
     }),
   ],
 
+  // =============== FIX: DEDUPE REACT ===============
+  resolve: {
+    alias: {
+      react: path.resolve("./node_modules/react"),
+      "react-dom": path.resolve("./node_modules/react-dom"),
+    },
+    dedupe: ["react", "react-dom"],
+  },
+
   // =============== SAFE BUILD CONFIG ===============
   build: {
     cssCodeSplit: true,
@@ -50,11 +60,11 @@ export default defineConfig({
         manualChunks(id) {
           // Chunk khusus node_modules
           if (id.includes("node_modules")) {
-            if (id.includes("lucide-react")) return "lucide"; // aman
-            if (id.includes("recharts")) return "recharts"; // aman
-            if (id.includes("pusher-js")) return "pusher"; // aman
+            if (id.includes("lucide-react")) return "lucide";
+            if (id.includes("recharts")) return "recharts";
+            if (id.includes("pusher-js")) return "pusher";
 
-            return "vendor"; // semua vendor disatukan → aman & stabil
+            return "vendor";
           }
         },
       },
@@ -64,7 +74,7 @@ export default defineConfig({
   // =============== DEP OPTIMIZATION ===============
   optimizeDeps: {
     include: ["react", "react-dom", "react-router-dom", "axios"],
-    exclude: ["pusher-js"], // tetap exclude karena lazy load
+    exclude: ["pusher-js"],
   },
 
   // =============== SERVER ===============
