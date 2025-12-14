@@ -1,45 +1,24 @@
-import { useState, useMemo } from "react";
-import { FileText, Download, TrendingUp, TrendingDown, Calendar, Users, BarChart3, PieChart, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { FileText, Download, TrendingUp, TrendingDown, Calendar, Users, BarChart3, ArrowUpRight, ArrowDownLeft, RefreshCw } from "lucide-react";
 import Sidebar from "../components/sidebar/Sidebar";
 import useNavigation from "../hooks/useNavigation";
-// Import Sidebar asli dari components
+import { getAllUsers, getAllExpenses, getAllIncomes, invalidateAdminCache } from "../api/adminService";
+import toast from "react-hot-toast";
+import openPrintWindow from "../utils/printUtils";
 
 function AdminLaporan() {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [_, setIsSidebarCollapsed] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
+    // State untuk data dari API
+    const [users, setUsers] = useState([]);
+    const [expenses, setExpenses] = useState([]);
+    const [incomes, setIncomes] = useState([]);
 
     const { currentPage, handlePageChange } = useNavigation();
-
-    // Dummy data dengan banyak users
-    const dummyUsers = [
-        { id: 1, name: "Ahmad Rizki", totalIncome: 15000000, totalExpense: 8500000 },
-        { id: 2, name: "Siti Nurhaliza", totalIncome: 12000000, totalExpense: 7200000 },
-        { id: 3, name: "Budi Santoso", totalIncome: 18000000, totalExpense: 9800000 },
-        { id: 4, name: "Dewi Lestari", totalIncome: 10000000, totalExpense: 6500000 },
-        { id: 5, name: "Eko Prasetyo", totalIncome: 16000000, totalExpense: 8200000 },
-    ];
-
-    const dummyExpenses = [
-        { _id: 1, name: "Makan", category: "Makanan", amount: 85000, date: new Date(2025, selectedMonth, 5), userId: 1 },
-        { _id: 2, name: "Transportasi", category: "Transportasi", amount: 150000, date: new Date(2025, selectedMonth, 6), userId: 2 },
-        { _id: 3, name: "Internet", category: "Utilitas", amount: 300000, date: new Date(2025, selectedMonth, 1), userId: 3 },
-        { _id: 4, name: "Belanja Groceries", category: "Belanja", amount: 450000, date: new Date(2025, selectedMonth, 8), userId: 1 },
-        { _id: 5, name: "Tagihan Listrik", category: "Utilitas", amount: 500000, date: new Date(2025, selectedMonth, 10), userId: 4 },
-        { _id: 6, name: "Bensin", category: "Transportasi", amount: 200000, date: new Date(2025, selectedMonth, 12), userId: 5 },
-        { _id: 7, name: "Hiburan", category: "Hiburan", amount: 250000, date: new Date(2025, selectedMonth, 15), userId: 2 },
-        { _id: 8, name: "Kesehatan", category: "Kesehatan", amount: 320000, date: new Date(2025, selectedMonth, 18), userId: 3 },
-    ];
-
-    const dummyIncomes = [
-        { _id: 1, name: "Gaji", source: "Kerja", amount: 10000000, date: new Date(2025, selectedMonth, 1), userId: 1 },
-        { _id: 2, name: "Gaji", source: "Kerja", amount: 8000000, date: new Date(2025, selectedMonth, 1), userId: 2 },
-        { _id: 3, name: "Gaji", source: "Kerja", amount: 12000000, date: new Date(2025, selectedMonth, 1), userId: 3 },
-        { _id: 4, name: "Gaji", source: "Kerja", amount: 7000000, date: new Date(2025, selectedMonth, 1), userId: 4 },
-        { _id: 5, name: "Gaji", source: "Kerja", amount: 11000000, date: new Date(2025, selectedMonth, 1), userId: 5 },
-        { _id: 6, name: "Bonus", source: "Bonus", amount: 2000000, date: new Date(2025, selectedMonth, 15), userId: 1 },
-    ];
 
     const monthNames = [
         "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -49,36 +28,203 @@ function AdminLaporan() {
     const currentYear = new Date().getFullYear();
     const yearOptions = Array.from({ length: 7 }, (_, i) => currentYear - 5 + i);
 
+    // Fetch data dari API
+    const fetchData = async (showToast = false) => {
+        try {
+            setLoading(true);
+
+            const [usersRes, expensesRes, incomesRes] = await Promise.all([
+                getAllUsers(),
+                getAllExpenses(selectedMonth + 1, selectedYear),
+                getAllIncomes(selectedMonth + 1, selectedYear)
+            ]);
+
+            setUsers(usersRes.data?.data || []);
+            setExpenses(expensesRes.data?.data || []);
+            setIncomes(incomesRes.data?.data || []);
+
+            if (showToast) {
+                toast.success("Data berhasil direfresh!");
+            }
+        } catch (error) {
+            console.error("Error fetching admin data:", error);
+            toast.error("Gagal mengambil data laporan");
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    // Fetch data saat component mount atau filter berubah
+    useEffect(() => {
+        fetchData();
+    }, [selectedMonth, selectedYear]);
+
+    // Handle refresh data
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        invalidateAdminCache();
+        await fetchData(true);
+    };
+
     // Kalkulasi data admin
     const allExpenses = useMemo(() =>
-        dummyExpenses.reduce((sum, exp) => sum + exp.amount, 0),
-        []
+        expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0),
+        [expenses]
     );
 
     const allIncomes = useMemo(() =>
-        dummyIncomes.reduce((sum, inc) => sum + inc.amount, 0),
-        []
+        incomes.reduce((sum, inc) => sum + (inc.amount || 0), 0),
+        [incomes]
     );
 
-    const totalUsers = dummyUsers.length;
+    const totalUsers = users.length;
     const netIncome = allIncomes - allExpenses;
 
     const categoryBreakdown = useMemo(() =>
-        dummyExpenses.reduce((acc, expense) => {
+        expenses.reduce((acc, expense) => {
             const category = expense.category || 'Lainnya';
             if (!acc[category]) {
                 acc[category] = { total: 0, count: 0 };
             }
-            acc[category].total += expense.amount;
+            acc[category].total += expense.amount || 0;
             acc[category].count += 1;
             return acc;
         }, {}),
-        []
+        [expenses]
     );
 
     const topCategories = Object.entries(categoryBreakdown)
         .sort(([, a], [, b]) => b.total - a.total)
         .slice(0, 5);
+
+    // Hitung total income dan expense per user
+    const userStats = useMemo(() => {
+        return users.map(user => {
+            const userIncomes = incomes
+                .filter(inc => {
+                    return inc.telegramId === user.telegramId ||
+                        inc.userId === user._id ||
+                        inc.userId === user.telegramId;
+                })
+                .reduce((sum, inc) => sum + (inc.amount || 0), 0);
+
+            const userExpenses = expenses
+                .filter(exp => {
+                    return exp.telegramId === user.telegramId ||
+                        exp.userId === user._id ||
+                        exp.userId === user.telegramId;
+                })
+                .reduce((sum, exp) => sum + (exp.amount || 0), 0);
+
+            return {
+                ...user,
+                totalIncome: userIncomes,
+                totalExpense: userExpenses,
+                netIncome: userIncomes - userExpenses
+            };
+        });
+    }, [users, incomes, expenses]);
+
+    const topUsers = userStats
+        .sort((a, b) => b.totalIncome - a.totalIncome)
+        .slice(0, 5);
+
+    // Helper function untuk mendapatkan nama user
+    const getUserName = (telegramId) => {
+        const user = users.find(u =>
+            u.telegramId === telegramId ||
+            u._id === telegramId
+        );
+        return user?.name || user?.username || "Unknown User";
+    };
+
+    // Handle Export PDF
+    const handleExportPDF = () => {
+        const reportData = {
+            selectedMonth,
+            selectedYear,
+            totalUsers,
+            allIncomes,
+            allExpenses,
+            netIncome,
+            incomes,
+            expenses,
+            topCategories,
+            topUsers,
+            monthNames
+        };
+
+        openPrintWindow(reportData);
+        toast.success("Membuka halaman print...");
+    };
+
+    // Handle Export CSV
+    const handleExportCSV = () => {
+        try {
+            // Header CSV
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "LAPORAN KEUANGAN ADMIN\n";
+            csvContent += `Periode:,${monthNames[selectedMonth]} ${selectedYear}\n`;
+            csvContent += `Tanggal Export:,${new Date().toLocaleDateString('id-ID')}\n\n`;
+
+            // Ringkasan
+            csvContent += "RINGKASAN\n";
+            csvContent += "Kategori,Jumlah\n";
+            csvContent += `Total User,${totalUsers}\n`;
+            csvContent += `Total Pemasukan,${allIncomes}\n`;
+            csvContent += `Total Pengeluaran,${allExpenses}\n`;
+            csvContent += `Saldo Bersih,${netIncome}\n\n`;
+
+            // Top Categories
+            csvContent += "TOP 5 KATEGORI PENGELUARAN\n";
+            csvContent += "No,Kategori,Total,Jumlah Transaksi,Persentase\n";
+            topCategories.forEach(([category, data], index) => {
+                const percentage = Math.round((data.total / allExpenses) * 100);
+                csvContent += `${index + 1},${category},${data.total},${data.count},${percentage}%\n`;
+            });
+            csvContent += "\n";
+
+            // Top Users
+            csvContent += "TOP 5 PENGGUNA\n";
+            csvContent += "No,Nama,Pemasukan,Pengeluaran,Bersih\n";
+            topUsers.forEach((user, index) => {
+                csvContent += `${index + 1},${user.name || user.username},${user.totalIncome},${user.totalExpense},${user.netIncome}\n`;
+            });
+
+            // Download
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `laporan_${monthNames[selectedMonth]}_${selectedYear}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success("CSV berhasil didownload!");
+        } catch (error) {
+            console.error("Error exporting CSV:", error);
+            toast.error("Gagal export CSV");
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex">
+                <Sidebar
+                    currentPage={currentPage}
+                    onPageChange={handlePageChange}
+                    onCollapseChange={setIsSidebarCollapsed}
+                />
+                <main className="flex-1 flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600 text-lg">Memuat data laporan...</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="flex">
@@ -101,8 +247,13 @@ function AdminLaporan() {
                                     </h1>
                                     <p className="text-gray-600 text-lg">Ringkasan dan analisis keuangan semua pengguna</p>
                                 </div>
-                                <button className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                                    Refresh Data
+                                <button
+                                    onClick={handleRefresh}
+                                    disabled={refreshing}
+                                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+                                    {refreshing ? 'Refreshing...' : 'Refresh Data'}
                                 </button>
                             </div>
                         </div>
@@ -160,7 +311,7 @@ function AdminLaporan() {
                                 <p className="text-3xl font-bold text-green-600">
                                     Rp {allIncomes.toLocaleString('id-ID')}
                                 </p>
-                                <p className="text-xs text-gray-500 mt-1">{dummyIncomes.length} transaksi</p>
+                                <p className="text-xs text-gray-500 mt-1">{incomes.length} transaksi</p>
                             </div>
 
                             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
@@ -171,7 +322,7 @@ function AdminLaporan() {
                                 <p className="text-3xl font-bold text-red-600">
                                     Rp {allExpenses.toLocaleString('id-ID')}
                                 </p>
-                                <p className="text-xs text-gray-500 mt-1">{dummyExpenses.length} transaksi</p>
+                                <p className="text-xs text-gray-500 mt-1">{expenses.length} transaksi</p>
                             </div>
 
                             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
@@ -193,7 +344,7 @@ function AdminLaporan() {
                                     <BarChart3 className="w-5 h-5 text-indigo-600" />
                                 </div>
                                 <p className="text-3xl font-bold text-indigo-600">
-                                    Rp {Math.round(allIncomes / totalUsers).toLocaleString('id-ID')}
+                                    Rp {totalUsers > 0 ? Math.round(allIncomes / totalUsers).toLocaleString('id-ID') : '0'}
                                 </p>
                                 <p className="text-xs text-gray-500 mt-1">Pemasukan per user</p>
                             </div>
@@ -204,57 +355,65 @@ function AdminLaporan() {
                             {/* Top Categories */}
                             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
                                 <h3 className="text-xl font-bold text-gray-700 mb-4">Kategori Pengeluaran Terbesar</h3>
-                                <div className="space-y-4">
-                                    {topCategories.map(([category, data]) => {
-                                        const percentage = (data.total / allExpenses) * 100;
-                                        return (
-                                            <div key={category}>
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-sm font-medium text-gray-700">{category}</span>
-                                                    <span className="text-sm font-bold text-gray-900">
-                                                        Rp {data.total.toLocaleString('id-ID')}
-                                                    </span>
+                                {topCategories.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {topCategories.map(([category, data]) => {
+                                            const percentage = (data.total / allExpenses) * 100;
+                                            return (
+                                                <div key={category}>
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="text-sm font-medium text-gray-700">{category}</span>
+                                                        <span className="text-sm font-bold text-gray-900">
+                                                            Rp {data.total.toLocaleString('id-ID')}
+                                                        </span>
+                                                    </div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                                        <div
+                                                            className="bg-gradient-to-r from-red-500 to-pink-600 h-2.5 rounded-full"
+                                                            style={{ width: `${percentage}%` }}
+                                                        ></div>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        {Math.round(percentage)}% ({data.count} transaksi)
+                                                    </p>
                                                 </div>
-                                                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                                    <div
-                                                        className="bg-gradient-to-r from-red-500 to-pink-600 h-2.5 rounded-full"
-                                                        style={{ width: `${percentage}%` }}
-                                                    ></div>
-                                                </div>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    {Math.round(percentage)}% ({data.count} transaksi)
-                                                </p>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-500 text-center py-8">Belum ada data pengeluaran</p>
+                                )}
                             </div>
 
                             {/* Top Users */}
                             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
                                 <h3 className="text-xl font-bold text-gray-700 mb-4">Top 5 Pengguna</h3>
-                                <div className="space-y-3">
-                                    {dummyUsers.sort((a, b) => b.totalIncome - a.totalIncome).map((user, index) => (
-                                        <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                                                    {index + 1}
+                                {topUsers.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {topUsers.map((user, index) => (
+                                            <div key={user.telegramId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                                                        {index + 1}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium text-gray-900">{user.name || user.username}</p>
+                                                        <p className="text-xs text-gray-500">
+                                                            Rp {user.netIncome.toLocaleString('id-ID')} bersih
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-medium text-gray-900">{user.name}</p>
-                                                    <p className="text-xs text-gray-500">
-                                                        Rp {(user.totalIncome - user.totalExpense).toLocaleString('id-ID')} bersih
+                                                <div className="text-right">
+                                                    <p className="font-bold text-green-600">
+                                                        Rp {user.totalIncome.toLocaleString('id-ID')}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-green-600">
-                                                    Rp {user.totalIncome.toLocaleString('id-ID')}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-500 text-center py-8">Belum ada data pengguna</p>
+                                )}
                             </div>
                         </div>
 
@@ -267,22 +426,29 @@ function AdminLaporan() {
                                     Pemasukan Terbaru
                                 </h3>
                                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                                    {dummyIncomes.sort((a, b) => new Date(b.date) - new Date(a.date)).map(income => (
-                                        <div key={income._id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100">
-                                            <div>
-                                                <p className="font-medium text-gray-900">{income.name}</p>
-                                                <p className="text-xs text-gray-500">
-                                                    {dummyUsers.find(u => u.id === income.userId)?.name}
-                                                </p>
-                                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full mt-1 inline-block">
-                                                    {income.source}
-                                                </span>
-                                            </div>
-                                            <p className="font-bold text-green-600">
-                                                Rp {income.amount.toLocaleString('id-ID')}
-                                            </p>
-                                        </div>
-                                    ))}
+                                    {incomes.length > 0 ? (
+                                        incomes
+                                            .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                            .slice(0, 10)
+                                            .map(income => (
+                                                <div key={income._id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100">
+                                                    <div>
+                                                        <p className="font-medium text-gray-900">{income.name}</p>
+                                                        <p className="text-xs text-gray-500">
+                                                            {getUserName(income.telegramId)}
+                                                        </p>
+                                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full mt-1 inline-block">
+                                                            {income.source || income.category}
+                                                        </span>
+                                                    </div>
+                                                    <p className="font-bold text-green-600">
+                                                        Rp {income.amount.toLocaleString('id-ID')}
+                                                    </p>
+                                                </div>
+                                            ))
+                                    ) : (
+                                        <p className="text-gray-500 text-center py-8">Belum ada data pemasukan</p>
+                                    )}
                                 </div>
                             </div>
 
@@ -293,22 +459,29 @@ function AdminLaporan() {
                                     Pengeluaran Terbaru
                                 </h3>
                                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                                    {dummyExpenses.sort((a, b) => new Date(b.date) - new Date(a.date)).map(expense => (
-                                        <div key={expense._id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
-                                            <div>
-                                                <p className="font-medium text-gray-900">{expense.name}</p>
-                                                <p className="text-xs text-gray-500">
-                                                    {dummyUsers.find(u => u.id === expense.userId)?.name}
-                                                </p>
-                                                <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1 inline-block">
-                                                    {expense.category}
-                                                </span>
-                                            </div>
-                                            <p className="font-bold text-red-600">
-                                                Rp {expense.amount.toLocaleString('id-ID')}
-                                            </p>
-                                        </div>
-                                    ))}
+                                    {expenses.length > 0 ? (
+                                        expenses
+                                            .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                            .slice(0, 10)
+                                            .map(expense => (
+                                                <div key={expense._id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
+                                                    <div>
+                                                        <p className="font-medium text-gray-900">{expense.name}</p>
+                                                        <p className="text-xs text-gray-500">
+                                                            {getUserName(expense.telegramId)}
+                                                        </p>
+                                                        <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1 inline-block">
+                                                            {expense.category}
+                                                        </span>
+                                                    </div>
+                                                    <p className="font-bold text-red-600">
+                                                        Rp {expense.amount.toLocaleString('id-ID')}
+                                                    </p>
+                                                </div>
+                                            ))
+                                    ) : (
+                                        <p className="text-gray-500 text-center py-8">Belum ada data pengeluaran</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -317,11 +490,17 @@ function AdminLaporan() {
                         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
                             <h3 className="text-xl font-bold text-gray-700 mb-4">Export Laporan</h3>
                             <div className="flex flex-wrap gap-4">
-                                <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                                <button
+                                    onClick={handleExportPDF}
+                                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                                >
                                     <Download className="w-5 h-5" />
                                     Export ke PDF
                                 </button>
-                                <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                                <button
+                                    onClick={handleExportCSV}
+                                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                                >
                                     <Download className="w-5 h-5" />
                                     Export ke CSV
                                 </button>
