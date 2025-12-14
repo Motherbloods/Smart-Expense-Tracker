@@ -35,13 +35,23 @@ const createIncome = async (req, res) => {
   }
 };
 
+// ✅ FIXED - Parameter order: (incomeId, data, userId)
 const editIncome = async (req, res) => {
   try {
+    console.log("Editing income with ID:", req.params.id, req.body);
     const updatedIncome = await editIncomeService(
-      req.body,
-      req.params.id,
-      req.user.telegramId
+      req.params.id, // incomeId first
+      req.body, // data second
+      req.user.telegramId // userId third
     );
+
+    if (!updatedIncome) {
+      return res.status(404).json({
+        success: false,
+        message: "Income not found or unauthorized",
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: "Income updated successfully",
@@ -75,6 +85,13 @@ const deleteIncome = async (req, res) => {
       incomeId,
       req.user.telegramId
     );
+
+    if (!deletedIncome) {
+      return res.status(404).json({
+        success: false,
+        message: "Income not found or unauthorized",
+      });
+    }
 
     return res.status(200).json({
       success: true,
