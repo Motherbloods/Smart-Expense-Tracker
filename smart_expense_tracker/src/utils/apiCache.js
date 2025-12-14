@@ -11,7 +11,7 @@ class APICache {
   set(key, data, ttl = this.defaultTTL) {
     this.cache.set(key, data);
     this.timestamps.set(key, Date.now() + ttl);
-    console.log(`✅ Cache set: ${key} (TTL: ${ttl / 1000}s)`);
+    // console.log(`✅ Cache set: ${key} (TTL: ${ttl / 1000}s)`);
   }
 
   get(key) {
@@ -28,7 +28,7 @@ class APICache {
     }
 
     const remaining = Math.round((expiry - now) / 1000);
-    console.log(`✅ Cache hit: ${key} (remaining: ${remaining}s)`);
+    // console.log(`✅ Cache hit: ${key} (remaining: ${remaining}s)`);
     return this.cache.get(key);
   }
 
@@ -67,7 +67,7 @@ export async function cachedAPICall(key, apiFunction, ttl) {
   }
 
   // 3. Create new API request
-  console.log(`🔄 Cache miss: ${key} - Calling API...`);
+  // console.log(`🔄 Cache miss: ${key} - Calling API...`);
   const request = (async () => {
     try {
       const result = await apiFunction();
