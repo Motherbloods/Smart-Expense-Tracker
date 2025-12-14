@@ -8,6 +8,12 @@ const expenseTrackerSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   incomeId: { type: mongoose.Schema.Types.ObjectId, ref: "IncomeTracker" },
   source: { type: String, enum: ["website", "telegram"], default: "website" },
+  confidence: {
+    type: Number,
+    min: 0,
+    max: 1,
+    default: 1,
+  },
 });
 
 const ExpenseTracker = mongoose.model("ExpenseTracker", expenseTrackerSchema);

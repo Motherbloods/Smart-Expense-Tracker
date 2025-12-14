@@ -13,6 +13,11 @@ const incomeSchema = new mongoose.Schema({
     },
   },
   date: { type: Date, default: Date.now },
+  sourceIncome: {
+    type: String,
+    enum: ["website", "telegram"],
+    default: "website",
+  },
 });
 
 const Income = mongoose.model("IncomeTracker", incomeSchema);
