@@ -4,6 +4,8 @@ import { getExpenses } from "../api/expenseService";
 import { getIncomes } from "../api/incomeService";
 import { getUserData } from "../api/loginService";
 import { FileText, Download, TrendingUp, TrendingDown, Calendar, DollarSign } from "lucide-react";
+import toast from "react-hot-toast";
+import openUserPrintWindow from "../utils/userPrintUtils";
 
 import useNavigation from "../hooks/useNavigation";
 
@@ -16,7 +18,7 @@ function Laporan() {
     const [isLoading] = useState(false);
     const [_, setIsSidebarCollapsed] = useState(false);
     const [isDataReady, setIsDataReady] = useState(false);
-    const [startTransition] = useTransition();
+    const [isPending, startTransition] = useTransition();
 
     const telegramId = localStorage.getItem("telegramId");
 
@@ -80,7 +82,7 @@ function Laporan() {
     const currentYear = new Date().getFullYear();
     const yearOptions = Array.from({ length: 7 }, (_, i) => currentYear - 5 + i);
 
-    // ✅ CRITICAL: Fetch only essential data for initial render
+    // Fetch only essential data for initial render
     const fetchCriticalData = useCallback(async () => {
         try {
             const userResponse = await getUserData(telegramId);
@@ -90,7 +92,7 @@ function Laporan() {
         }
     }, [telegramId]);
 
-    // ✅ NON-CRITICAL: Fetch transaction data after initial render
+    // Fetch transaction data after initial render
     const fetchNonCriticalData = useCallback(async () => {
         try {
             const [expenseResponse, incomeResponse] = await Promise.all([
@@ -103,18 +105,18 @@ function Laporan() {
             setIsDataReady(true);
         } catch (error) {
             console.error("Error fetching transactions", error);
-            setIsDataReady(true); // Show UI even if data fetch fails
+            setIsDataReady(true);
         }
     }, []);
 
-    // ✅ Fetch critical data immediately on mount
+    // Fetch critical data immediately on mount
     useEffect(() => {
         if (telegramId) {
             fetchCriticalData();
         }
     }, [telegramId, fetchCriticalData]);
 
-    // ✅ Fetch non-critical data using requestIdleCallback to defer
+    // Fetch non-critical data using requestIdleCallback to defer
     useEffect(() => {
         if (telegramId && !isDataReady) {
             const timeoutId = requestIdleCallback(() => {
@@ -138,53 +140,130 @@ function Laporan() {
         });
     };
 
-    // Export functions
+    // Export to PDF - Open in new window
     const exportToPDF = () => {
-        alert("Fitur export PDF akan segera tersedia!");
+        const reportData = {
+            selectedMonth,
+            selectedYear,
+            totalIncomes,
+            totalExpenses,
+            netIncome,
+            monthlyBudget,
+            budgetPercentage,
+            filteredIncomes,
+            filteredExpenses,
+            categoryBreakdown,
+            monthNames
+        };
+
+        openUserPrintWindow(reportData);
+        toast.success("Membuka halaman print...");
     };
 
+    // Export to CSV
     const exportToCSV = () => {
-        const csvData = [];
-        csvData.push(['Laporan Keuangan']);
-        csvData.push(['Periode', `${monthNames[selectedMonth]} ${selectedYear}`]);
-        csvData.push([]);
-        csvData.push(['Ringkasan']);
-        csvData.push(['Total Pemasukan', `Rp ${totalIncomes.toLocaleString('id-ID')}`]);
-        csvData.push(['Total Pengeluaran', `Rp ${totalExpenses.toLocaleString('id-ID')}`]);
-        csvData.push(['Saldo Bersih', `Rp ${netIncome.toLocaleString('id-ID')}`]);
-        csvData.push(['Budget Bulanan', `Rp ${monthlyBudget.toLocaleString('id-ID')}`]);
-        csvData.push([]);
-        csvData.push(['Detail Pengeluaran']);
-        csvData.push(['Tanggal', 'Nama', 'Kategori', 'Jumlah']);
+        try {
+            const csvData = [];
 
-        filteredExpenses.forEach(exp => {
-            csvData.push([
-                new Date(exp.date).toLocaleDateString('id-ID'),
-                exp.name,
-                exp.category,
-                exp.amount
-            ]);
-        });
+            // Header
+            csvData.push(['LAPORAN KEUANGAN']);
+            csvData.push([`Periode: ${monthNames[selectedMonth]} ${selectedYear}`]);
+            csvData.push([]);
 
-        csvData.push([]);
-        csvData.push(['Detail Pemasukan']);
-        csvData.push(['Tanggal', 'Nama', 'Sumber', 'Jumlah']);
+            // Ringkasan
+            csvData.push(['RINGKASAN']);
+            csvData.push(['Total Pemasukan', `Rp ${totalIncomes.toLocaleString('id-ID')}`]);
+            csvData.push(['Total Pengeluaran', `Rp ${totalExpenses.toLocaleString('id-ID')}`]);
+            csvData.push(['Saldo Bersih', `Rp ${netIncome.toLocaleString('id-ID')}`]);
+            csvData.push(['Budget Bulanan', `Rp ${monthlyBudget.toLocaleString('id-ID')}`]);
+            csvData.push(['Penggunaan Budget', `${Math.round(budgetPercentage)}%`]);
+            csvData.push([]);
 
-        filteredIncomes.forEach(inc => {
-            csvData.push([
-                new Date(inc.date).toLocaleDateString('id-ID'),
-                inc.name,
-                inc.source || '-',
-                inc.amount
-            ]);
-        });
+            // Kategori Pengeluaran
+            csvData.push(['PENGELUARAN PER KATEGORI']);
+            csvData.push(['Kategori', 'Total', 'Persentase', 'Jumlah Transaksi']);
 
-        const csvContent = csvData.map(row => row.join(',')).join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `laporan-keuangan-${monthNames[selectedMonth]}-${selectedYear}.csv`;
-        link.click();
+            if (Object.keys(categoryBreakdown).length > 0) {
+                Object.entries(categoryBreakdown)
+                    .sort(([, a], [, b]) => b.total - a.total)
+                    .forEach(([category, data]) => {
+                        const percentage = (data.total / totalExpenses) * 100;
+                        csvData.push([
+                            category,
+                            data.total,
+                            `${Math.round(percentage)}%`,
+                            data.count
+                        ]);
+                    });
+            }
+            csvData.push([]);
+
+            // Detail Pemasukan
+            csvData.push(['DETAIL PEMASUKAN']);
+            csvData.push(['Tanggal', 'Nama', 'Sumber', 'Jumlah']);
+
+            if (filteredIncomes.length > 0) {
+                filteredIncomes
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .forEach(inc => {
+                        csvData.push([
+                            new Date(inc.date).toLocaleDateString('id-ID'),
+                            inc.name,
+                            inc.source || '-',
+                            inc.amount
+                        ]);
+                    });
+            } else {
+                csvData.push(['Belum ada data pemasukan']);
+            }
+            csvData.push([]);
+
+            // Detail Pengeluaran
+            csvData.push(['DETAIL PENGELUARAN']);
+            csvData.push(['Tanggal', 'Nama', 'Kategori', 'Jumlah']);
+
+            if (filteredExpenses.length > 0) {
+                filteredExpenses
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .forEach(exp => {
+                        csvData.push([
+                            new Date(exp.date).toLocaleDateString('id-ID'),
+                            exp.name,
+                            exp.category,
+                            exp.amount
+                        ]);
+                    });
+            } else {
+                csvData.push(['Belum ada data pengeluaran']);
+            }
+
+            // Convert to CSV string with proper escaping
+            const csvContent = csvData.map(row =>
+                row.map(cell => {
+                    const cellStr = String(cell);
+                    if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+                        return `"${cellStr.replace(/"/g, '""')}"`;
+                    }
+                    return cellStr;
+                }).join(',')
+            ).join('\n');
+
+            // Add BOM for proper Excel UTF-8 encoding
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `laporan-keuangan-${monthNames[selectedMonth]}-${selectedYear}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+
+            toast.success("CSV berhasil didownload!");
+        } catch (error) {
+            console.error("Error exporting CSV:", error);
+            toast.error("Gagal export CSV");
+        }
     };
 
     return (
@@ -207,10 +286,10 @@ function Laporan() {
                             </div>
                             <button
                                 onClick={fetchNonCriticalData}
-                                disabled={isLoading}
+                                disabled={isLoading || isPending}
                                 className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-70"
                             >
-                                {isLoading ? 'Loading...' : 'Refresh Data'}
+                                {isLoading || isPending ? 'Loading...' : 'Refresh Data'}
                             </button>
                         </div>
                     </div>
@@ -226,7 +305,8 @@ function Laporan() {
                                 <select
                                     value={selectedMonth}
                                     onChange={handleMonthChange}
-                                    className="px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-md"
+                                    disabled={isPending}
+                                    className="px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-md disabled:opacity-70"
                                 >
                                     {monthNames.map((month, index) => (
                                         <option key={index} value={index}>
@@ -238,7 +318,8 @@ function Laporan() {
                                 <select
                                     value={selectedYear}
                                     onChange={handleYearChange}
-                                    className="px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-md"
+                                    disabled={isPending}
+                                    className="px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-md disabled:opacity-70"
                                 >
                                     {yearOptions.map((year) => (
                                         <option key={year} value={year}>
