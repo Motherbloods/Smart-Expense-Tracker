@@ -1,25 +1,32 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useMemo } from 'react';
+import { useEffect } from 'react';
 
 function ProtectedRoute({ children, allowedRoles = [] }) {
     const location = useLocation();
+    useEffect(() => {
+        console.log("🔍 ProtectedRoute check:", {
+            path: location.pathname,
+            telegramId: localStorage.getItem("telegramId"),
+            userData: localStorage.getItem("userData")
+        });
+    }, [location]);
 
-    // ✅ Get auth data dengan fallback
-    const token = localStorage.getItem("token");
+    // ✅ Cek auth hanya dari telegramId (token ada di HttpOnly cookies)
     const telegramId = localStorage.getItem("telegramId");
-    const isAuthenticated = Boolean(token && telegramId);
+    const isAuthenticated = Boolean(telegramId);
 
     // ✅ Parse user data dengan error handling
     const userData = useMemo(() => {
         try {
-            const user = localStorage.getItem("user");
+            const user = localStorage.getItem("userData");
             if (user) {
                 return JSON.parse(user);
             }
         } catch (error) {
             console.error("Error parsing user data:", error);
             // Clear corrupted data
-            localStorage.removeItem("user");
+            localStorage.removeItem("userData");
         }
         return null;
     }, []);
@@ -34,7 +41,7 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
     if (allowedRoles.length === 0) {
         return children;
     }
-
+    console.log("👤 User data:", userData?.role);
     // ✅ Check user role
     const userRole = userData?.role || 'user';
 
