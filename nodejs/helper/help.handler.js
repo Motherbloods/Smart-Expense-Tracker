@@ -24,8 +24,8 @@ Makan Rp 30000
 \`\`\`
 
 *CARA MENCATAT PEMASUKAN:*
-Format: \`/pemasukan [jumlah] [sumber] [catatan]\`
-Contoh: \`/pemasukan 5000000 Gaji Bonus bulan ini\`
+Format: \`/pemasukan [nama pemasukan] [jumlah] [sumber] [catatan]\`
+Contoh: \`/pemasukan gajian, 5000000, Gaji Bonus bulan ini\`
 
 *TIPS:*
 ✓ Gunakan format Rp untuk nominal

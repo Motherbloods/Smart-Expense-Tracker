@@ -22,10 +22,7 @@ const handleSingleExpense = async (telegramId, inputText, res) => {
   try {
     const startTime = performance.now();
 
-    // Send chat action (typing indicator)
     await sendChatAction(telegramId, "typing");
-
-    // Send waiting message
     waitingMessage = await sendWaitingMessage(telegramId);
 
     const webhookUrl =
@@ -37,30 +34,35 @@ const handleSingleExpense = async (telegramId, inputText, res) => {
 
     console.log("n8nResponse.data:", n8nResponse.data);
 
-    const { teks_asli, teks_parsing, confidence, recognized, category } =
-      n8nResponse.data;
+    const { teks_parsing, confidence, recognized, category } = n8nResponse.data;
 
-    // Extract amount if present in the activity
+    const { nama_pengeluaran_asli_tanpa_nominal } = teks_parsing;
     const amount = extractAmount(inputText);
+    console.log(
+      `Extracted amount: ${recognized} from inputText: "${confidence}"`
+    );
 
     let replyText;
-    if (recognized) {
-      replyText = `✅ Pengeluaran: "${teks_asli}"\nKategori: ${category}\nKeyakinan: ${(
+    if (recognized && confidence >= 0.8) {
+      replyText = `✅ Pengeluaran: "${nama_pengeluaran_asli_tanpa_nominal}"\nKategori: ${category}\nKeyakinan: ${(
         confidence * 100
       ).toFixed(2)}%`;
 
       try {
-        // Format category with capitalized first letter
         const formattedCategory =
           category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
-        const formattedDescription = capitalizeWords(teks_asli);
+        const formattedDescription = capitalizeWords(
+          nama_pengeluaran_asli_tanpa_nominal
+        );
 
+        // ✅ Tambahkan confidence di sini
         await createExpenseService(
           {
             name: formattedDescription,
             amount: amount || 0,
             category: formattedCategory,
             date: new Date(),
+            confidence: confidence, // ✅ Simpan confidence
           },
           telegramId,
           "telegram"
@@ -73,27 +75,27 @@ const handleSingleExpense = async (telegramId, inputText, res) => {
             amount,
             category: formattedCategory,
             date: new Date(),
+            confidence: confidence, // ✅ Simpan confidence
           },
         });
       } catch (dbError) {
         console.error("Error saving expense to database:", dbError);
       }
     } else {
-      replyText = `❓ Maaf, saya tidak dapat mengenali kategori untuk "${teks_asli}" dengan yakin.\nPrediksi: ${category}\nKeyakinan: ${(
+      replyText = `❓ Maaf, saya tidak dapat mengenali kategori untuk "${nama_pengeluaran_asli_tanpa_nominal}" dengan yakin.\nPrediksi: ${category}\nKeyakinan: ${(
         confidence * 100
       ).toFixed(
         2
       )}%\n\nMohon balas dengan kategori yang tepat untuk pengeluaran ini.\nAtau ketik "/batal" untuk batalkan.`;
 
-      // Store this prediction in sessionCache for potential correction
       sessionCache.set(telegramId, {
         activity: inputText,
         prediction: category,
+        confidence: confidence, // ✅ Simpan confidence untuk low confidence
         awaitingCorrection: true,
       });
     }
 
-    // Edit waiting message with final response
     if (waitingMessage) {
       const edited = await editMessage(
         telegramId,
@@ -101,7 +103,6 @@ const handleSingleExpense = async (telegramId, inputText, res) => {
         replyText
       );
       if (!edited) {
-        // Fallback: send new message if edit fails
         await sendMessage(telegramId, replyText);
       }
     } else {
@@ -118,7 +119,6 @@ const handleSingleExpense = async (telegramId, inputText, res) => {
   } catch (error) {
     console.error("Error classifying expense:", error);
 
-    // Edit waiting message with error message
     if (waitingMessage) {
       const edited = await editMessage(
         telegramId,
