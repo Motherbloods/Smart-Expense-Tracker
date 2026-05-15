@@ -13,7 +13,7 @@ const handleBatchCorrection = async (
   telegramId,
   inputText,
   userSession,
-  res
+  res,
 ) => {
   try {
     if (
@@ -103,7 +103,7 @@ const handleBatchCorrection = async (
             date: new Date(),
           },
           telegramId,
-          "telegram"
+          "telegram",
         );
 
         if (savedExpenses) {
@@ -133,7 +133,7 @@ const handleBatchCorrection = async (
 
           // Remove this expense from the session
           userSession.expenses = userSession.expenses.filter(
-            (e) => e.index !== index
+            (e) => e.index !== index,
           );
         } else {
           failedCorrections.push({
@@ -147,14 +147,6 @@ const handleBatchCorrection = async (
           input: correction,
           reason: `Kesalahan sistem: ${error.message}`,
         });
-      }
-    }
-
-    if (correctionLog.length > 0) {
-      try {
-        saveCorrectionsToFile(correctionLog);
-      } catch (error) {
-        console.error("Error saving corrections to file:", error);
       }
     }
 
@@ -217,7 +209,7 @@ const handleBatchCorrection = async (
     try {
       await sendMessage(
         telegramId,
-        "❌ Terjadi kesalahan sistem. Silakan coba lagi."
+        "❌ Terjadi kesalahan sistem. Silakan coba lagi.",
       );
     } catch (msgError) {
       console.error("Failed to send error message:", msgError);
