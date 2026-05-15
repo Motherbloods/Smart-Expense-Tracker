@@ -134,8 +134,15 @@ function IncomeForm({
 
     const handleCancel = () => {
         // Clear form and editing state
-        setFormData({ name: "", amount: "", source: "", notes: "", date: "" });
+        setFormData({
+            name: "",
+            amount: "",
+            source: "",
+            notes: "",
+            date: new Date().toISOString().split("T")[0],
+        });
         setDisplayAmount("");
+        setIsCustomSource(false);
         setIncomeEdit(null);
     };
 

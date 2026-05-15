@@ -1,10 +1,10 @@
-import { useEffect, useState, useMemo } from "react";
-import { getIncomes } from "../../api/incomeService";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
 function ExpenseForm({
     onAddExpense,
     expensesData,
+    incomesData,
     onUpdateExpense,
     expenseEdit,
     setExpenseEdit,
@@ -14,94 +14,97 @@ function ExpenseForm({
         name: "",
         amount: "",
         category: "",
-        sourceIncomeId: '',
+        sourceIncomeId: "",
         date: new Date().toISOString().split("T")[0],
     });
     const [displayAmount, setDisplayAmount] = useState("");
-    const [incomes, setIncomes] = useState([]);
-    const [isLoadingIncomes, setIsLoadingIncomes] = useState(true);
     const [selectedIncome, setSelectedIncome] = useState(null);
     const [isCustomCategory, setIsCustomCategory] = useState(false);
 
-    // ✅ Gunakan useMemo untuk memoize availableIncomes
-    const availableIncomes = useMemo(() =>
-        incomes.filter(income => income.remainingAmount > 0),
-        [incomes]
+    const allIncomes = useMemo(
+        () => (Array.isArray(incomesData) ? incomesData : []),
+        [incomesData]
+    );
+
+    const availableIncomes = useMemo(
+        () => allIncomes.filter((income) => income.remainingAmount > 0),
+        [allIncomes]
     );
 
     const uniqueCategories = [
         ...new Set(expensesData.map((expense) => expense.category)),
     ];
 
-    // Fungsi untuk refresh data incomes
-    const refreshIncomes = async () => {
-        setIsLoadingIncomes(true);
-        try {
-            const res = await getIncomes();
-            const incomesData = Array.isArray(res.data.data) ? res.data.data : [];
-            setIncomes(incomesData);
-        } catch (error) {
-            console.error("Gagal mengambil data income:", error);
-        } finally {
-            setIsLoadingIncomes(false);
-        }
-    };
-
-    // ✅ Pisahkan useEffect untuk expenseEdit
     useEffect(() => {
-        if (expenseEdit) {
-            const expenseDate = new Date(expenseEdit.date);
-            const formattedDate = expenseDate.toISOString().split("T")[0]
+        if (!expenseEdit) {
+            return;
+        }
 
-            // Handle jika incomeId adalah object (hasil populate) atau string
-            const incomeIdValue = typeof expenseEdit.incomeId === 'object'
-                ? expenseEdit.incomeId._id
+        const expenseDate = new Date(expenseEdit.date);
+        const formattedDate = expenseDate.toISOString().split("T")[0];
+        const incomeIdValue =
+            typeof expenseEdit.incomeId === "object"
+                ? expenseEdit.incomeId?._id
                 : expenseEdit.incomeId;
 
-            setFormData({
-                name: expenseEdit.name,
-                amount: expenseEdit.amount,
-                category: expenseEdit.category,
-                sourceIncomeId: incomeIdValue || '',
-                date: formattedDate,
-            });
+        setFormData({
+            name: expenseEdit.name,
+            amount: expenseEdit.amount,
+            category: expenseEdit.category,
+            sourceIncomeId: incomeIdValue || "",
+            date: formattedDate,
+        });
 
-            setDisplayAmount(
-                new Intl.NumberFormat("id-ID").format(expenseEdit.amount)
-            );
+        setDisplayAmount(
+            new Intl.NumberFormat("id-ID").format(expenseEdit.amount)
+        );
 
-            // Set selected income untuk mode edit
-            if (incomeIdValue) {
-                const editIncome = incomes.find(income => income._id === incomeIdValue);
-                setSelectedIncome(editIncome);
-            }
+        if (incomeIdValue) {
+            const editIncome =
+                allIncomes.find((income) => income._id === incomeIdValue) || null;
+            setSelectedIncome(editIncome);
         }
-    }, [expenseEdit, incomes]);
+    }, [allIncomes, expenseEdit]);
 
-    // ✅ Pisahkan useEffect untuk validasi selectedIncome
     useEffect(() => {
-        // Reset selectedIncome jika income yang dipilih sudah tidak tersedia
-        if (selectedIncome && !availableIncomes.find(income => income._id === selectedIncome._id)) {
+        if (!selectedIncome) {
+            return;
+        }
+
+        const refreshedIncome = allIncomes.find(
+            (income) => income._id === selectedIncome._id
+        );
+
+        if (!refreshedIncome || refreshedIncome.remainingAmount <= 0) {
             setSelectedIncome(null);
-            setFormData(prev => ({ ...prev, sourceIncomeId: '' }));
+            setFormData((prev) => ({ ...prev, sourceIncomeId: "" }));
             toast.warning("Sumber pendapatan yang dipilih sudah tidak tersedia", {
                 position: "top-right",
                 autoClose: 3000,
                 theme: "colored",
             });
+            return;
         }
-    }, [selectedIncome, availableIncomes]);
 
-    useEffect(() => {
-        const loadInitialData = async () => {
-            await refreshIncomes();
-        };
-        loadInitialData();
-    }, []);
+        if (refreshedIncome.remainingAmount !== selectedIncome.remainingAmount) {
+            setSelectedIncome(refreshedIncome);
+        }
+    }, [allIncomes, selectedIncome]);
 
     const validateAmountAgainstIncome = (amount, income) => {
         if (!income || !amount) return true;
         return Number(amount) <= income.remainingAmount;
+    };
+
+    const showErrorToast = (message) => {
+        if (!toast.isActive("form-error")) {
+            toast.error(message, {
+                toastId: "form-error",
+                position: "top-right",
+                autoClose: 3000,
+                theme: "colored",
+            });
+        }
     };
 
     const handleChange = (e) => {
@@ -110,16 +113,20 @@ function ExpenseForm({
         if (name === "name" || name === "category") {
             const capitalized = value
                 .split(" ")
-                .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .map(
+                    (word) =>
+                        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                )
                 .join(" ");
 
             setFormData((prev) => ({
                 ...prev,
                 [name]: capitalized,
             }));
+            return;
         }
-        else if (name === "amount") {
-            // Cegah input amount jika belum memilih sumber pendapatan (kecuali mode edit)
+
+        if (name === "amount") {
             if (!selectedIncome && !expenseEdit) {
                 showErrorToast("Pilih sumber pendapatan terlebih dahulu");
                 return;
@@ -127,7 +134,6 @@ function ExpenseForm({
 
             const numericValue = value.replace(/\D/g, "");
 
-            // Validasi hanya jika ada income yang dipilih
             if (
                 selectedIncome &&
                 numericValue &&
@@ -149,15 +155,16 @@ function ExpenseForm({
                     ? new Intl.NumberFormat("id-ID").format(numericValue)
                     : ""
             );
+            return;
         }
-        else if (name === "sourceIncomeId") {
-            setFormData((prev) => ({ ...prev, sourceIncomeId: value }));
 
-            // Set selected income untuk validasi
-            const selected = availableIncomes.find(income => income._id === value);
+        if (name === "sourceIncomeId") {
+            const selected =
+                allIncomes.find((income) => income._id === value) || null;
+
+            setFormData((prev) => ({ ...prev, sourceIncomeId: value }));
             setSelectedIncome(selected);
 
-            // Reset amount jika ada amount yang sudah diisi sebelumnya dan melebihi saldo income baru
             if (
                 formData.amount &&
                 selected &&
@@ -171,65 +178,65 @@ function ExpenseForm({
                         theme: "colored",
                     }
                 );
-                // Reset amount
                 setFormData((prev) => ({ ...prev, amount: "" }));
                 setDisplayAmount("");
             }
+            return;
         }
-        else {
-            setFormData((prev) => ({
-                ...prev,
-                [name]: value,
-            }));
-        }
-    };
 
-    const showErrorToast = (message) => {
-        if (!toast.isActive("form-error")) {
-            toast.error(message, {
-                toastId: "form-error",
-                position: "top-right",
-                autoClose: 3000,
-                theme: "colored",
-            });
-        }
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
     };
 
     const isFormValid = () => {
-        const basicFieldsValid = formData.name && formData.amount && formData.category && formData.date;
+        const basicFieldsValid =
+            formData.name && formData.amount && formData.category && formData.date;
 
-        // Ambil ID yang benar (handle jika berupa object)
         let sourceId = formData.sourceIncomeId;
-        if (typeof sourceId === 'object' && sourceId !== null) {
+        if (typeof sourceId === "object" && sourceId !== null) {
             sourceId = sourceId._id;
         }
 
         const sourceIncomeValid = sourceId || (expenseEdit && expenseEdit.incomeId);
-        const amountValid = !selectedIncome || validateAmountAgainstIncome(formData.amount, selectedIncome);
-        const hasAvailableIncomes = availableIncomes.length > 0 || expenseEdit;
+        const amountValid =
+            !selectedIncome || validateAmountAgainstIncome(formData.amount, selectedIncome);
+        const hasAvailableSources = availableIncomes.length > 0 || expenseEdit;
 
-        return basicFieldsValid && sourceIncomeValid && amountValid && hasAvailableIncomes;
+        return (
+            basicFieldsValid &&
+            sourceIncomeValid &&
+            amountValid &&
+            hasAvailableSources
+        );
     };
 
     const handleClick = async () => {
-        console.log("handle click");
-
-        // Validasi gagal
         if (!isFormValid()) {
             if (availableIncomes.length === 0 && !expenseEdit) {
-                toast.error("Tidak ada pemasukan tersedia. Silakan tambahkan pemasukan terlebih dahulu.");
-            } else if (!formData.name || !formData.amount || !formData.category || !formData.date) {
+                toast.error(
+                    "Tidak ada pemasukan tersedia. Silakan tambahkan pemasukan terlebih dahulu."
+                );
+            } else if (
+                !formData.name ||
+                !formData.amount ||
+                !formData.category ||
+                !formData.date
+            ) {
                 toast.error("Mohon lengkapi semua field yang diperlukan.");
             } else {
-                // Check sourceIncomeId dengan handle object
                 let sourceId = formData.sourceIncomeId;
-                if (typeof sourceId === 'object' && sourceId !== null) {
+                if (typeof sourceId === "object" && sourceId !== null) {
                     sourceId = sourceId._id;
                 }
 
                 if (!sourceId && !(expenseEdit && expenseEdit.incomeId)) {
                     toast.error("Mohon pilih sumber pendapatan.");
-                } else if (selectedIncome && !validateAmountAgainstIncome(formData.amount, selectedIncome)) {
+                } else if (
+                    selectedIncome &&
+                    !validateAmountAgainstIncome(formData.amount, selectedIncome)
+                ) {
                     toast.error("Jumlah pengeluaran melebihi saldo yang tersedia.");
                 }
             }
@@ -239,26 +246,24 @@ function ExpenseForm({
         const currentTime = new Date().toTimeString().split(" ")[0];
         const fullDateTime = new Date(`${formData.date}T${currentTime}`);
 
-        // Untuk mode edit, gunakan sourceIncomeId yang ada jika tidak diubah
-        // Pastikan selalu menggunakan string ID, bukan object
         let finalSourceIncomeId = formData.sourceIncomeId;
-
-        // Jika masih berupa object, ambil _id nya
-        if (typeof finalSourceIncomeId === 'object' && finalSourceIncomeId !== null) {
+        if (typeof finalSourceIncomeId === "object" && finalSourceIncomeId !== null) {
             finalSourceIncomeId = finalSourceIncomeId._id;
         }
 
-        // Fallback ke incomeId dari expenseEdit jika kosong
         if (!finalSourceIncomeId && expenseEdit) {
-            finalSourceIncomeId = typeof expenseEdit.incomeId === 'object'
-                ? expenseEdit.incomeId._id
-                : expenseEdit.incomeId;
+            finalSourceIncomeId =
+                typeof expenseEdit.incomeId === "object"
+                    ? expenseEdit.incomeId._id
+                    : expenseEdit.incomeId;
         }
 
         const finalSourceIncomeName = selectedIncome
             ? selectedIncome.name
             : expenseEdit
-                ? (typeof expenseEdit.incomeId === 'object' ? expenseEdit.incomeId.name : expenseEdit.sourceIncomeName || "")
+                ? typeof expenseEdit.incomeId === "object"
+                    ? expenseEdit.incomeId.name
+                    : expenseEdit.sourceIncomeName || ""
                 : "";
 
         const expenseData = {
@@ -269,22 +274,16 @@ function ExpenseForm({
             sourceIncomeName: finalSourceIncomeName,
         };
 
-        console.log("expense data:", expenseData);
-
         try {
             if (expenseEdit) {
                 await onUpdateExpense({ ...expenseData, id: expenseEdit._id });
-                toast.success("Pengeluaran berhasil diperbarui ✅");
+                toast.success("Pengeluaran berhasil diperbarui");
                 setExpenseEdit(null);
             } else {
                 await onAddExpense(expenseData);
-                toast.success("Pengeluaran berhasil ditambahkan ✅");
+                toast.success("Pengeluaran berhasil ditambahkan");
             }
 
-            // Refresh data incomes setelah berhasil menyimpan
-            await refreshIncomes();
-
-            // Reset form
             setFormData({
                 name: "",
                 amount: "",
@@ -297,18 +296,17 @@ function ExpenseForm({
             setIsCustomCategory(false);
         } catch (error) {
             console.error("Error saat menyimpan pengeluaran:", error);
-            toast.error("Terjadi kesalahan. Silakan coba lagi ❌");
+            toast.error("Terjadi kesalahan. Silakan coba lagi");
         }
     };
 
     const handleCancel = () => {
-        // Clear form and editing state
         setFormData({
             name: "",
             amount: "",
             category: "",
-            sourceIncomeId: '',
-            date: new Date().toISOString().split("T")[0]
+            sourceIncomeId: "",
+            date: new Date().toISOString().split("T")[0],
         });
         setDisplayAmount("");
         setSelectedIncome(null);
@@ -317,26 +315,17 @@ function ExpenseForm({
     };
 
     const getAmountValidationMessage = () => {
-        if (!formData.amount) return null;
-        if (!selectedIncome) return null;
+        if (!formData.amount || !selectedIncome) return null;
         if (!validateAmountAgainstIncome(formData.amount, selectedIncome)) {
             return "Jumlah melebihi saldo yang tersedia";
         }
         return null;
     };
 
-    // Check if there are no available incomes and not in edit mode
     const hasNoAvailableIncomes = availableIncomes.length === 0 && !expenseEdit;
 
     return (
         <div className="bg-white shadow-md p-4 rounded-xl space-y-4">
-            {isLoadingIncomes && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
-                    <span className="text-sm text-blue-700">Memuat data pendapatan...</span>
-                </div>
-            )}
-            {/* Info banner when no available incomes */}
             {hasNoAvailableIncomes && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start space-x-3">
                     <div className="flex-shrink-0">
@@ -372,7 +361,7 @@ function ExpenseForm({
                         value={formData.name}
                         onChange={handleChange}
                         placeholder="Masukkan nama pengeluaran"
-                        className={`mt-1 p-2 border border-gray-300 rounded-md w-full ${hasNoAvailableIncomes ? 'bg-gray-100 text-gray-500' : 'bg-white'
+                        className={`mt-1 p-2 border border-gray-300 rounded-md w-full ${hasNoAvailableIncomes ? "bg-gray-100 text-gray-500" : "bg-white"
                             }`}
                     />
                 </div>
@@ -391,7 +380,7 @@ function ExpenseForm({
                         name="sourceIncomeId"
                         value={formData.sourceIncomeId}
                         onChange={handleChange}
-                        className={`mt-1 p-2 border border-gray-300 rounded-md w-full ${hasNoAvailableIncomes ? 'bg-gray-100 text-gray-500' : 'bg-white'
+                        className={`mt-1 p-2 border border-gray-300 rounded-md w-full ${hasNoAvailableIncomes ? "bg-gray-100 text-gray-500" : "bg-white"
                             }`}
                         disabled={isLoading || hasNoAvailableIncomes}
                     >
@@ -428,7 +417,7 @@ function ExpenseForm({
                                     handleChange(e);
                                 }
                             }}
-                            className={`mt-1 p-2 border border-gray-300 rounded-md w-full ${hasNoAvailableIncomes ? 'bg-gray-100 text-gray-500' : 'bg-white'
+                            className={`mt-1 p-2 border border-gray-300 rounded-md w-full ${hasNoAvailableIncomes ? "bg-gray-100 text-gray-500" : "bg-white"
                                 }`}
                             disabled={isLoading || hasNoAvailableIncomes}
                         >
@@ -454,7 +443,7 @@ function ExpenseForm({
                                     setIsCustomCategory(false);
                                 }
                             }}
-                            className={`mt-1 p-2 border border-gray-300 rounded-md w-full ${hasNoAvailableIncomes ? 'bg-gray-100 text-gray-500' : 'bg-white'
+                            className={`mt-1 p-2 border border-gray-300 rounded-md w-full ${hasNoAvailableIncomes ? "bg-gray-100 text-gray-500" : "bg-white"
                                 }`}
                             disabled={isLoading || hasNoAvailableIncomes}
                         />
@@ -525,7 +514,7 @@ function ExpenseForm({
                         value={formData.date}
                         onChange={handleChange}
                         id="date"
-                        className={`mt-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ${hasNoAvailableIncomes ? 'bg-gray-100 text-gray-500' : 'bg-white'
+                        className={`mt-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full ${hasNoAvailableIncomes ? "bg-gray-100 text-gray-500" : "bg-white"
                             }`}
                         disabled={isLoading || hasNoAvailableIncomes}
                     />
@@ -536,8 +525,8 @@ function ExpenseForm({
                 <button
                     onClick={handleClick}
                     className={`px-6 py-2.5 ${isLoading || !isFormValid()
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-blue-500 hover:bg-blue-700'
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-blue-500 hover:bg-blue-700"
                         } focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-opacity-50 cursor-pointer text-white text-base rounded-lg font-semibold transition-colors duration-300 ease-in-out w-full sm:w-auto`}
                     disabled={isLoading || !isFormValid()}
                 >

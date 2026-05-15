@@ -1,6 +1,8 @@
 import axiosInstance from "./axiosInstance";
 import { cachedAPICall, apiCache } from "../utils/apiCache";
 
+const getTelegramId = () => localStorage.getItem("telegramId");
+
 // ✅ Helper untuk retry dengan delay
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -29,7 +31,9 @@ const retryRequest = async (requestFn, maxRetries = 2, delayMs = 300) => {
 };
 
 // ✅ Get Incomes dengan caching dan retry
-export const getIncomes = (telegramId) => {
+export const getIncomes = () => {
+  const telegramId = getTelegramId();
+
   return cachedAPICall(
     `incomes_${telegramId}`,
     async () => {
@@ -47,7 +51,7 @@ export const getIncomes = (telegramId) => {
 };
 
 // ✅ Create Income
-export const createIncome = async (incomeData, telegramId) => {
+export const createIncome = async (incomeData, telegramId = getTelegramId()) => {
   try {
     const response = await axiosInstance.post("/incomes/create", incomeData);
 
@@ -63,7 +67,7 @@ export const createIncome = async (incomeData, telegramId) => {
 };
 
 // ✅ Edit Income
-export const editIncome = async (incomeId, incomeData, telegramId) => {
+export const editIncome = async (incomeId, incomeData, telegramId = getTelegramId()) => {
   try {
     const response = await axiosInstance.put(
       `/incomes/${incomeId}`,
@@ -82,7 +86,7 @@ export const editIncome = async (incomeId, incomeData, telegramId) => {
 };
 
 // ✅ Delete Income - dengan better error handling
-export const deleteIncome = async (incomeId, telegramId) => {
+export const deleteIncome = async (incomeId, telegramId = getTelegramId()) => {
   try {
     const response = await axiosInstance.delete(`/incomes/${incomeId}`);
 

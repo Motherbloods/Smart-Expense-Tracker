@@ -6,7 +6,7 @@ import { createExpense, deleteExpense, editExpense, getExpenses } from "../api/e
 import { createIncome, deleteIncome, editIncome, getIncomes } from "../api/incomeService";
 import { getUserData } from "../api/loginService";
 import { toast } from "react-toastify";
-import { cachedAPICall, apiCache } from "../utils/apiCache";
+import { apiCache } from "../utils/apiCache";
 import useNavigation from "../hooks/useNavigation";
 
 // ✅ LAZY LOADING
@@ -407,21 +407,9 @@ function Dashboard() {
         try {
             // ✅ Parallel fetching untuk user, expenses, dan incomes
             const [userResponse, expenseResponse, incomeResponse] = await Promise.all([
-                cachedAPICall(
-                    `user_${telegramId}`,
-                    () => getUserData(telegramId),
-                    10 * 60 * 1000 // 10 menit cache untuk user data
-                ),
-                cachedAPICall(
-                    `expenses_${telegramId}`,
-                    getExpenses,
-                    2 * 60 * 1000 // 2 menit cache
-                ),
-                cachedAPICall(
-                    `incomes_${telegramId}`,
-                    getIncomes,
-                    2 * 60 * 1000 // 2 menit cache
-                )
+                getUserData(telegramId),
+                getExpenses(),
+                getIncomes(),
             ]);
 
             // Set semua state sekaligus
@@ -441,8 +429,8 @@ function Dashboard() {
     const refreshAllData = useCallback(async () => {
         try {
             const [expenseResponse, incomeResponse] = await Promise.all([
-                cachedAPICall(`expenses_${telegramId}`, getExpenses, 2 * 60 * 1000),
-                cachedAPICall(`incomes_${telegramId}`, getIncomes, 2 * 60 * 1000)
+                getExpenses(),
+                getIncomes(),
             ]);
 
             setExpenses(expenseResponse.data.data);
@@ -805,6 +793,7 @@ function Dashboard() {
                                     <ExpenseForm
                                         onAddExpense={onAddExpense}
                                         expensesData={expenses}
+                                        incomesData={incomes}
                                         onUpdateExpense={handleUpdateExpense}
                                         expenseEdit={expenseEdit}
                                         setExpenseEdit={setExpenseEdit}
