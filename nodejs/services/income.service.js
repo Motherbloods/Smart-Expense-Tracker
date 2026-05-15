@@ -17,7 +17,7 @@ const createIncomeService = async (data, userId, sourceIncome = "website") => {
     // Validasi required fields
     if (!name || !amount || !source) {
       console.log(
-        "Missing required fields: name, amount, and source are required."
+        "Missing required fields: name, amount, and source are required.",
       );
       return null;
     }
@@ -68,7 +68,7 @@ const createIncomeService = async (data, userId, sourceIncome = "website") => {
       source,
       notes,
       description: `Pemasukan ${name} sebesar Rp ${amount.toLocaleString(
-        "id-ID"
+        "id-ID",
       )}`,
       metadata: {
         date: savedIncome.date,
@@ -101,20 +101,33 @@ const editIncomeService = async (incomeId, data, userId) => {
       return null;
     }
 
+    const oldAmount = income.amount;
+    const newAmount = amount;
+    const amountDifference = newAmount - oldAmount;
+
+    const newRemainingAmount = income.remainingAmount + amountDifference;
+
+    if (newRemainingAmount < 0) {
+      console.log(
+        "Cannot reduce income amount below used amount. Remaining would be negative.",
+      );
+      return null;
+    }
+
     const updatedIncome = await IncomeTracker.findByIdAndUpdate(
       incomeId,
       {
         userId,
         name,
         source,
-        amount,
+        amount: newAmount,
+        remainingAmount: newRemainingAmount,
         notes,
         date,
       },
-      { new: true }
+      { new: true },
     );
 
-    // 🆕 Log activity
     await createActivityLog({
       userId,
       telegramId: userId,
@@ -129,8 +142,11 @@ const editIncomeService = async (incomeId, data, userId) => {
         updatedIncome.name
       } diupdate menjadi Rp ${updatedIncome.amount.toLocaleString("id-ID")}`,
       metadata: {
-        oldAmount: income.amount,
-        newAmount: updatedIncome.amount,
+        oldAmount,
+        newAmount,
+        oldRemainingAmount: income.remainingAmount,
+        newRemainingAmount: updatedIncome.remainingAmount,
+        amountDifference,
         date: updatedIncome.date,
       },
       sourceUser: "Website",
