@@ -29,7 +29,7 @@ const createExpenseService = async (data, userId, source = "website") => {
       if (!availableIncome) {
         console.log(
           "⚠️ Tidak ada income yang cukup untuk menutup amount:",
-          amount
+          amount,
         );
         return null;
       }
@@ -74,7 +74,7 @@ const createExpenseService = async (data, userId, source = "website") => {
       "⚠️ Sisa income tidak cukup. Remaining:",
       income.remainingAmount,
       "| Dibutuhkan:",
-      amount
+      amount,
     );
     return null;
   }
@@ -83,7 +83,7 @@ const createExpenseService = async (data, userId, source = "website") => {
     "✏️ Update sisa income:",
     income.remainingAmount,
     "->",
-    income.remainingAmount - amount
+    income.remainingAmount - amount,
   );
   income.remainingAmount -= amount;
   await income.save();
@@ -116,7 +116,7 @@ const createExpenseService = async (data, userId, source = "website") => {
     amount,
     category,
     description: `Pengeluaran ${name} sebesar Rp ${amount.toLocaleString(
-      "id-ID"
+      "id-ID",
     )}`,
     metadata: {
       incomeSource: income.name,
@@ -151,33 +151,47 @@ const editExpenseService = async (data, expenseId, userId) => {
       oldIncome.remainingAmount += oldAmount;
       await oldIncome.save();
     }
+
     const newIncome = await Income.findById(newIncomeId);
     if (!newIncome) {
       console.log("New income source not found");
-      return null;
-    }
-    if (newIncome.remainingAmount < newAmount) {
-      console.log("Not enough remaining amount in the new income source.");
       if (oldIncome) {
         oldIncome.remainingAmount -= oldAmount;
         await oldIncome.save();
       }
       return null;
     }
-    newIncome.remainingAmount -= newAmount;
+
+    if (newIncome.remainingAmount < newAmount) {
+      console.log("Not enough remaining amount in the new income source.");
+      // Rollback old income
+      if (oldIncome) {
+        oldIncome.remainingAmount -= oldAmount;
+        await oldIncome.save();
+      }
+      return null;
+    }
+
+    newIncome.remainingAmount -= newAmount; // Kurangi dengan amount baru
     await newIncome.save();
   } else if (oldAmount !== newAmount) {
+    // Kasus: Same income, beda amount
     const income = await Income.findById(oldIncomeId);
     if (!income) {
       console.log("Income source not found");
       return null;
     }
-    const amountDifference = newAmount - oldAmount;
-    if (amountDifference > 0 && income.remainingAmount < amountDifference) {
-      console.log("Not enough remaining amount for the increased expense.");
+
+    income.remainingAmount += oldAmount;
+
+    if (income.remainingAmount < newAmount) {
+      console.log("Not enough remaining amount for the new expense amount.");
+      income.remainingAmount -= oldAmount;
+      await income.save();
       return null;
     }
-    income.remainingAmount -= amountDifference;
+
+    income.remainingAmount -= newAmount;
     await income.save();
   }
 
@@ -193,7 +207,7 @@ const editExpenseService = async (data, expenseId, userId) => {
       incomeId: newIncomeId,
       confidence: confidence !== undefined ? confidence : expense.confidence, // ✅ Update confidence jika ada
     },
-    { new: true }
+    { new: true },
   );
 
   const newIncome = await Income.findById(newIncomeId);
