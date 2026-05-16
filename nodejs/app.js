@@ -9,11 +9,17 @@ const adminRouter = require("./routes/admin.route.js");
 
 // ✅ Create app FRESH tanpa import dari utils.js
 const app = express();
-
 // ✅ CORS Middleware PERTAMA - SEBELUM SEMUA
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  const allowedOrigins = ["http://localhost:5173", "http://localhost:4173"];
+
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
+    : [
+        "http://localhost:5173",
+        "http://localhost:4173",
+        "https://smart_expense_tracker.motherbloodss.site",
+      ];
 
   console.log("🔍 CORS Middleware:");
   console.log("   Method:", req.method);

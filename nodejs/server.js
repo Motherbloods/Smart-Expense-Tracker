@@ -15,14 +15,23 @@ const app = express();
 // ========================================
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+
   const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
-    : [];
+    ? process.env.ALLOWED_ORIGINS.split(",").map((o) =>
+        o.trim().replace(/\/$/, ""),
+      )
+    : [
+        "http://localhost:5173",
+        "http://localhost:4173",
+        "https://smart_expense_tracker.motherbloodss.site",
+      ];
 
-  console.log(`🔍 [${req.method}] ${req.path} from ${origin || "no-origin"}`);
+  const normalizedOrigin = origin ? origin.replace(/\/$/, "") : "";
 
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
+  if (allowedOrigins.includes(normalizedOrigin)) {
+    res.setHeader("Access-Control-Allow-Origin", normalizedOrigin);
+  } else {
+    console.log("   ❌ Origin not in allowed list");
   }
 
   res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -36,7 +45,7 @@ app.use((req, res, next) => {
   );
 
   if (req.method === "OPTIONS") {
-    console.log("   📋 Preflight handled");
+    console.log("   📋 Preflight - returning 204");
     return res.status(204).end();
   }
 
