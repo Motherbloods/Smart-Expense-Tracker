@@ -34,7 +34,6 @@ export default defineConfig({
     }),
   ],
 
-  // =============== FIX: DEDUPE REACT ===============
   resolve: {
     alias: {
       react: path.resolve("./node_modules/react"),
@@ -43,25 +42,15 @@ export default defineConfig({
     dedupe: ["react", "react-dom"],
   },
 
-  // =============== SAFE BUILD CONFIG ===============
   build: {
     cssCodeSplit: true,
-    minify: "terser",
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        pure_funcs: ["console.log", "console.info"],
-      },
-    },
+    minify: "esbuild",
 
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Chunk khusus node_modules
           if (id.includes("node_modules")) {
             if (id.includes("lucide-react")) return "lucide";
-            if (id.includes("recharts")) return "recharts";
             if (id.includes("pusher-js")) return "pusher";
 
             return "vendor";
@@ -71,13 +60,11 @@ export default defineConfig({
     },
   },
 
-  // =============== DEP OPTIMIZATION ===============
   optimizeDeps: {
-    include: ["react", "react-dom", "react-router-dom", "axios"],
+    include: ["react", "react-dom", "react-router-dom", "axios", "recharts"],
     exclude: ["pusher-js"],
   },
 
-  // =============== SERVER ===============
   server: {
     headers: {
       "Cache-Control": "public, max-age=31536000",
