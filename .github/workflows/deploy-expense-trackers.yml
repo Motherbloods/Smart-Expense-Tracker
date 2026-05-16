@@ -1,0 +1,80 @@
+name: Deploy Smart Expense Tracker Production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploys:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Create Backend Env
+        run: |
+          printf "%s" "${{ secrets.EXPENSE_ENV_BE }}" > $GITHUB_WORKSPACE/nodejs/.env
+
+      - name: Create Frontend Env
+        run: |
+          printf "%s" "${{ secrets.EXPENSE_ENV_FE }}" > $GITHUB_WORKSPACE/smart_expense_tracker/.env
+
+      - name: Ensure network exists
+        run: |
+          docker network inspect n8n-network >/dev/null 2>&1 || docker network create n8n-network
+
+      - name: Build Backend
+        run: |
+          docker build \
+            -t smart-expense-api-image \
+            $GITHUB_WORKSPACE/nodejs
+
+      - name: Restart Backend
+        run: |
+          docker rm -f expense-api || true
+          docker run -d \
+            --name expense-api \
+            -p 3002:3000 \
+            --network n8n-network \
+            --restart unless-stopped \
+            --env-file $GITHUB_WORKSPACE/nodejs/.env \
+            --cap-drop ALL \
+            smart-expense-api-image
+
+      - name: Build Frontend
+        run: |
+          set -a
+          . $GITHUB_WORKSPACE/smart_expense_tracker/.env
+          set +a
+
+          docker build \
+            --build-arg VITE_API_URL="$VITE_API_URL" \
+            --build-arg VITE_TELEGRAM_BOT_LINK="$VITE_TELEGRAM_BOT_LINK" \
+            --build-arg VITE_PUSHER_KEY="$VITE_PUSHER_KEY" \
+            --build-arg VITE_PUSHER_CLUSTER="$VITE_PUSHER_CLUSTER" \
+            --build-arg VITE_PUSHER_SUBSCRIBE="$VITE_PUSHER_SUBSCRIBE" \
+            -t smart-expense-tracker-image \
+            $GITHUB_WORKSPACE/smart_expense_tracker
+
+      - name: Restart Frontend
+        run: |
+          docker rm -f smart_expense_tracker || true
+          docker run -d \
+            --name smart_expense_tracker \
+            -p 8082:80 \
+            --restart unless-stopped \
+            --network n8n-network \
+            --cap-drop ALL \
+            --cap-add SETGID \
+            --cap-add SETUID \
+            --cap-add NET_BIND_SERVICE \
+            smart-expense-tracker-image
+
+      - name: Cleanup Env Files
+        if: always()
+        run: |
+          rm -f $GITHUB_WORKSPACE/nodejs/.env
+          rm -f $GITHUB_WORKSPACE/smart_expense_tracker/.env
