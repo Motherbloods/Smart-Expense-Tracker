@@ -15,7 +15,9 @@ const app = express();
 // ========================================
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  const allowedOrigins = ["http://localhost:5173", "http://localhost:4173"];
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
+    : [];
 
   console.log(`🔍 [${req.method}] ${req.path} from ${origin || "no-origin"}`);
 
@@ -26,11 +28,11 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader(
     "Access-Control-Allow-Methods",
-    "GET,POST,PUT,DELETE,PATCH,OPTIONS"
+    "GET,POST,PUT,DELETE,PATCH,OPTIONS",
   );
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type,Authorization,Cookie"
+    "Content-Type,Authorization,Cookie",
   );
 
   if (req.method === "OPTIONS") {
