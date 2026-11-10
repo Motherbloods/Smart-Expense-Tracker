@@ -82,12 +82,12 @@ const CardSkeleton = () => (
 );
 
 const EmptyState = ({ icon, title, subtitle }) => (
-  <div className="flex flex-col items-center justify-center py-14 text-slate-400">
-    <div className="w-16 h-16 mb-4 rounded-2xl bg-slate-100 flex items-center justify-center">
+  <div className="flex flex-col items-center justify-center py-12 text-center">
+    <div className="w-12 h-12 mb-3 rounded-xl bg-[var(--brand-tint)] flex items-center justify-center">
       {icon}
     </div>
-    <p className="text-base font-semibold text-slate-500 mb-1">{title}</p>
-    <p className="text-sm text-center text-slate-400 max-w-xs">{subtitle}</p>
+    <p className="text-sm font-semibold text-[var(--text-1)] mb-1">{title}</p>
+    <p className="text-sm text-[var(--text-3)] max-w-xs">{subtitle}</p>
   </div>
 );
 
@@ -990,7 +990,7 @@ function Dashboard() {
                             height="24"
                             viewBox="0 0 24 24"
                             fill="none"
-                            stroke="#94a3b8"
+                            stroke="#0f766e"
                             strokeWidth="1.5"
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -1030,7 +1030,7 @@ function Dashboard() {
                               height="24"
                               viewBox="0 0 24 24"
                               fill="none"
-                              stroke="#94a3b8"
+                              stroke="#0f766e"
                               strokeWidth="1.5"
                               strokeLinecap="round"
                               strokeLinejoin="round"
