@@ -8,10 +8,14 @@ npm-debug.log
 
 .env
 .env.*
+credentials.json
+*.pem
+*.key
 
 coverage
 dist
 build
+tests
 
 Dockerfile
 .dockerignore

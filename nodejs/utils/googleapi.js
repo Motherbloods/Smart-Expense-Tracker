@@ -1,45 +1,45 @@
 const { google } = require("googleapis");
-const { capitalizeWords } = require("./text-formatter");
 
-const credentials = "../credentials.json";
-
-const auth = new google.auth.GoogleAuth({
-  credentials,
-  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-});
-
-const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID;
 const SHEET_NAME = "Sheet1";
 
-async function appendFeedback(feedback) {
-  const authClient = await auth.getClient();
-  const sheets = google.sheets({ version: "v4", auth: authClient });
-  console.log(feedback);
-  feedback.user_input ? capitalizeWords(feedback.user_input) : "";
-  feedback.prediction ? capitalizeWords(feedback.prediction) : "";
-  feedback.correct ? capitalizeWords(feedback.correct) : "";
+const buildAuth = () => {
+  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!raw) return null;
+  try {
+    return new google.auth.GoogleAuth({
+      credentials: JSON.parse(raw),
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+  } catch (error) {
+    console.error("Invalid GOOGLE_SERVICE_ACCOUNT_JSON");
+    return null;
+  }
+};
 
-  const now = new Date().toISOString();
-  const values = [
-    [feedback.user_input, feedback.prediction, feedback.correct, now],
-  ];
-
-  const resource = {
-    values,
-  };
+const appendFeedback = async (feedback) => {
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+  const auth = buildAuth();
+  if (!auth || !spreadsheetId) return false;
 
   try {
-    const result = await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:D`,
-      valueInputOption: "USER_ENTERED",
-      resource,
-    });
+    const authClient = await auth.getClient();
+    const sheets = google.sheets({ version: "v4", auth: authClient });
 
-    console.log("✅ Feedback berhasil disimpan ke Google Sheets.");
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: `${SHEET_NAME}!A:D`,
+      valueInputOption: "RAW",
+      resource: {
+        values: [
+          [feedback.user_input, feedback.prediction, feedback.correct, new Date().toISOString()],
+        ],
+      },
+    });
+    return true;
   } catch (err) {
-    console.error("❌ Gagal menyimpan ke Sheets:", err);
+    console.error("Failed to append feedback to Google Sheets:", err.message);
+    return false;
   }
-}
+};
 
 module.exports = appendFeedback;
