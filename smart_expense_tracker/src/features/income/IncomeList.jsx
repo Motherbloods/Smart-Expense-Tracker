@@ -46,10 +46,10 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 bg-slate-900/40"
           onClick={cancelDelete}
         />
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div role="dialog" aria-modal="true" className="relative bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden">
           <button
             onClick={cancelDelete}
             className="absolute top-4 right-4 w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
@@ -70,8 +70,8 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
                 "{incomeToDelete.name}"
               </span>{" "}
               senilai{" "}
-              <span className="font-semibold text-emerald-600">
-                Rp {incomeToDelete.amount.toLocaleString()}
+              <span className="mono font-semibold text-[var(--income)]">
+                Rp {incomeToDelete.amount.toLocaleString("id-ID")}
               </span>
             </p>
             <p className="text-xs text-red-500 mt-2">
@@ -82,13 +82,13 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
           <div className="px-6 pb-6 flex gap-3">
             <button
               onClick={cancelDelete}
-              className="flex-1 py-2.5 rounded-xl text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+              className="flex-1 py-2.5 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
             >
               Batal
             </button>
             <button
               onClick={confirmDelete}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
             >
               Ya, Hapus
             </button>
@@ -100,13 +100,13 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
 
   const EmptyState = () => (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4">
-        <TrendingUp size={28} className="text-emerald-400" />
+      <div className="w-14 h-14 bg-[var(--brand-tint)] rounded-lg flex items-center justify-center mb-4">
+        <TrendingUp size={26} className="text-[var(--income)]" />
       </div>
       <p className="text-sm font-medium text-gray-700 mb-1">
         Belum ada data pemasukan
       </p>
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-slate-500">
         Tambahkan pemasukan pertama Anda di atas
       </p>
     </div>
@@ -114,23 +114,23 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
 
   return (
     <>
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="form-card">
+        <div className="form-card__head">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center">
-              <TrendingUp size={16} className="text-emerald-600" />
+            <div className="form-icon form-icon--income">
+              <TrendingUp size={16} />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">
+              <h2 className="form-title">
                 Daftar Pemasukan
               </h2>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="form-sub">
                 {incomes.length} entri tercatat
               </p>
             </div>
           </div>
           {totalPages > 1 && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-slate-500">
               Hal. {currentPage}/{totalPages}
             </span>
           )}
@@ -141,7 +141,7 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
           {currentData.length > 0 ? (
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50/70">
+                <tr className="bg-[var(--surface-2)]">
                   {[
                     "Nama",
                     "Jumlah",
@@ -153,18 +153,18 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
                   ].map((h) => (
                     <th
                       key={h}
-                      className="py-3 px-5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider first:rounded-tl-none last:rounded-tr-none"
+                      className={`py-2.5 px-5 text-xs font-semibold text-slate-500 ${h === "Jumlah" || h === "Sisa Saldo" || h === "Aksi" ? "text-right" : "text-left"}`}
                     >
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-slate-100">
                 {currentData.map((income) => (
                   <tr
                     key={income._id}
-                    className="hover:bg-gray-50/50 transition-colors group"
+                    className="hover:bg-[var(--surface-2)] transition-colors group"
                   >
                     <td className="py-3.5 px-5">
                       <span
@@ -174,19 +174,19 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
                         {income.name}
                       </span>
                     </td>
-                    <td className="py-3.5 px-5 whitespace-nowrap">
-                      <span className="text-sm font-semibold text-emerald-600">
-                        Rp {income.amount.toLocaleString()}
+                    <td className="py-3.5 px-5 whitespace-nowrap text-right">
+                      <span className="mono text-sm font-semibold text-[var(--income)]">
+                        Rp {income.amount.toLocaleString("id-ID")}
                       </span>
                     </td>
                     <td className="py-3.5 px-5 whitespace-nowrap">
-                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                      <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
                         {income.source}
                       </span>
                     </td>
                     <td className="py-3.5 px-5">
                       <span
-                        className="text-sm text-gray-400 max-w-[150px] truncate block"
+                        className="text-sm text-slate-500 max-w-[150px] truncate block"
                         title={income.notes || "-"}
                       >
                         {income.notes || (
@@ -194,9 +194,9 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
                         )}
                       </span>
                     </td>
-                    <td className="py-3.5 px-5 whitespace-nowrap">
-                      <span className="text-sm font-semibold text-blue-500">
-                        Rp {income.remainingAmount?.toLocaleString() ?? "0"}
+                    <td className="py-3.5 px-5 whitespace-nowrap text-right">
+                      <span className="mono text-sm font-semibold text-[var(--text-1)]">
+                        Rp {income.remainingAmount?.toLocaleString("id-ID") ?? "0"}
                       </span>
                     </td>
                     <td className="py-3.5 px-5 whitespace-nowrap">
@@ -209,20 +209,22 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
                       </span>
                     </td>
                     <td className="py-3.5 px-5 whitespace-nowrap">
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => handleEdit(income)}
-                          className="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 flex items-center justify-center transition-colors"
+                          aria-label="Edit"
+                          className="row-action"
                           title="Edit"
                         >
-                          <Edit size={13} className="text-indigo-600" />
+                          <Edit size={15} />
                         </button>
                         <button
                           onClick={() => handleDeleteClick(income)}
-                          className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors"
+                          aria-label="Hapus"
+                          className="row-action row-action--danger"
                           title="Hapus"
                         >
-                          <Trash2 size={13} className="text-red-500" />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </td>
@@ -236,19 +238,19 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
         </div>
 
         {/* Mobile Cards */}
-        <div className="md:hidden divide-y divide-gray-50">
+        <div className="md:hidden divide-y divide-slate-100">
           {currentData.length > 0 ? (
             currentData.map((income) => (
               <div
                 key={income._id}
-                className="p-4 hover:bg-gray-50/50 transition-colors"
+                className="p-4 hover:bg-[var(--surface-2)] transition-colors"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="text-sm font-semibold text-gray-800">
                       {income.name}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="form-sub">
                       {new Date(income.date).toLocaleDateString("id-ID", {
                         day: "numeric",
                         month: "short",
@@ -259,41 +261,43 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleEdit(income)}
-                      className="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 flex items-center justify-center"
+                      aria-label="Edit"
+                      className="row-action"
                     >
-                      <Edit size={13} className="text-indigo-600" />
+                      <Edit size={15} />
                     </button>
                     <button
                       onClick={() => handleDeleteClick(income)}
-                      className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center"
+                      aria-label="Hapus"
+                      className="row-action row-action--danger"
                     >
-                      <Trash2 size={13} className="text-red-500" />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs text-gray-400 mb-0.5">Jumlah</p>
-                    <p className="text-sm font-semibold text-emerald-600">
-                      Rp {income.amount.toLocaleString()}
+                    <p className="text-xs text-slate-500 mb-0.5">Jumlah</p>
+                    <p className="mono text-sm font-semibold text-[var(--income)]">
+                      Rp {income.amount.toLocaleString("id-ID")}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-0.5">Sisa Saldo</p>
-                    <p className="text-sm font-semibold text-blue-500">
-                      Rp {income.remainingAmount?.toLocaleString() ?? "0"}
+                    <p className="text-xs text-slate-500 mb-0.5">Sisa Saldo</p>
+                    <p className="mono text-sm font-semibold text-[var(--text-1)]">
+                      Rp {income.remainingAmount?.toLocaleString("id-ID") ?? "0"}
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-xs text-gray-400 mb-1">Sumber</p>
-                    <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                    <p className="text-xs text-slate-500 mb-1">Sumber</p>
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
                       {income.source}
                     </span>
                   </div>
                   {income.notes && (
                     <div className="col-span-2">
-                      <p className="text-xs text-gray-400 mb-0.5">Catatan</p>
+                      <p className="text-xs text-slate-500 mb-0.5">Catatan</p>
                       <p className="text-sm text-gray-600">{income.notes}</p>
                     </div>
                   )}
@@ -306,7 +310,7 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
         </div>
 
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+          <div className="form-card__foot">
             <button
               onClick={() => changePage(currentPage - 1)}
               disabled={currentPage === 1}
@@ -322,7 +326,7 @@ function IncomeList({ incomes, onDeleteIncome, handleEditIncome }) {
                     onClick={() => changePage(page)}
                     className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${
                       page === currentPage
-                        ? "bg-emerald-500 text-white"
+                        ? "bg-[var(--brand)] text-white"
                         : "text-gray-500 hover:bg-gray-100"
                     }`}
                   >
