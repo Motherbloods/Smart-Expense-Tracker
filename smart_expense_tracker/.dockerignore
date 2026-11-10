@@ -26,3 +26,6 @@ __tests__
 
 README.md
 *.md
+tests
+.vercel
+coverage
