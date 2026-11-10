@@ -1,125 +1,135 @@
-const UserExpenseTracker = require("../models/user.js");
 const jwt = require("jsonwebtoken");
+const UserExpenseTracker = require("../models/user.js");
 const { handleErrorResponse } = require("../helper/errorHelper.handler.js");
+const { isTelegramId } = require("../utils/validators");
+const { verifyLoginCode } = require("../utils/loginCode");
+
+const ACCESS_TTL_MS = 15 * 60 * 1000;
+const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+const baseCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict",
+  path: "/",
+});
+
+const signAccessToken = (user) =>
+  jwt.sign(
+    { telegramId: user.telegramId, tv: user.tokenVersion || 0, typ: "access" },
+    process.env.JWT_SECRET,
+    { expiresIn: "15m", algorithm: "HS256" }
+  );
+
+const signRefreshToken = (user) =>
+  jwt.sign(
+    { telegramId: user.telegramId, tv: user.tokenVersion || 0, typ: "refresh" },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: "7d", algorithm: "HS256" }
+  );
+
+const setAccessCookie = (res, token) =>
+  res.cookie("accessToken", token, { ...baseCookieOptions(), maxAge: ACCESS_TTL_MS });
+
+const setRefreshCookie = (res, token) =>
+  res.cookie("refreshToken", token, { ...baseCookieOptions(), maxAge: REFRESH_TTL_MS });
+
+const clearAuthCookies = (res) => {
+  res.clearCookie("accessToken", baseCookieOptions());
+  res.clearCookie("refreshToken", baseCookieOptions());
+};
 
 const loginToDashboard = async (req, res) => {
-  const { telegramId } = req.body;
+  const telegramId = typeof req.body?.telegramId === "string" ? req.body.telegramId.trim() : "";
+  const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
 
-  if (!telegramId || telegramId.trim() === "") {
+  if (!isTelegramId(telegramId) || !/^\d{6}$/.test(code)) {
     return res.status(400).json({
       success: false,
-      message: "telegramId is required",
+      message: "telegramId and a 6-digit code are required",
     });
   }
 
   try {
-    const existingUser = await UserExpenseTracker.findOne({
-      telegramId: telegramId.trim(),
-    });
+    const validCode = await verifyLoginCode(telegramId, code);
+    const user = validCode ? await UserExpenseTracker.findOne({ telegramId }) : null;
 
-    if (!existingUser) {
-      return res.status(404).json({
+    if (!user) {
+      return res.status(401).json({
         success: false,
-        message: "User not found",
+        message: "Invalid Telegram ID or code",
       });
     }
 
-    // ✅ Access token (short-lived: 15 menit)
-    const accessToken = jwt.sign(
-      { telegramId: existingUser.telegramId },
-      process.env.JWT_SECRET,
-      { expiresIn: "15m" }
-    );
+    setAccessCookie(res, signAccessToken(user));
+    setRefreshCookie(res, signRefreshToken(user));
 
-    // ✅ Refresh token (long-lived: 7 hari)
-    const refreshToken = jwt.sign(
-      { telegramId: existingUser.telegramId },
-      process.env.JWT_REFRESH_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // ✅ Set HttpOnly cookies (tidak bisa diakses JavaScript)
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true, // Tidak bisa diakses via JavaScript
-      secure: process.env.NODE_ENV === "production", // HTTPS only di production
-      sameSite: "strict", // CSRF protection
-      maxAge: 15 * 60 * 1000, // 15 menit
-    });
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 hari
-    });
-
-    // ✅ Hanya kirim data non-sensitif ke client
-    res.json({
+    return res.json({
       success: true,
       user: {
-        username: existingUser.username,
-        budgetMontly: existingUser.budgetMontly,
-        telegramId: existingUser.telegramId,
-        role: existingUser.role,
+        username: user.username,
+        budgetMontly: user.budgetMontly,
+        telegramId: user.telegramId,
+        role: user.role,
       },
     });
   } catch (e) {
-    console.error("Error logging in:", e.message);
     return handleErrorResponse(res, "Error logging in", e);
   }
 };
 
-// ✅ Endpoint untuk refresh token
-// Di auth.controller.js - refreshAccessToken
 const refreshAccessToken = async (req, res) => {
-  console.log("🔄 Refresh token request received");
-  console.log("Cookies:", req.cookies);
-
-  const refreshToken = req.cookies.refreshToken;
+  const refreshToken = req.cookies?.refreshToken;
 
   if (!refreshToken) {
-    console.log("❌ No refresh token found");
-    return res.status(401).json({
-      success: false,
-      message: "No refresh token",
-    });
+    return res.status(401).json({ success: false, message: "No refresh token" });
   }
 
   try {
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    console.log("✅ Refresh token valid for:", decoded.telegramId);
-
-    const newAccessToken = jwt.sign(
-      { telegramId: decoded.telegramId },
-      process.env.JWT_SECRET,
-      { expiresIn: "15m" }
-    );
-
-    res.cookie("accessToken", newAccessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 15 * 60 * 1000,
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, {
+      algorithms: ["HS256"],
     });
 
-    console.log("✅ New access token issued");
-    res.json({ success: true });
+    if (decoded.typ !== "refresh" || typeof decoded.telegramId !== "string") {
+      throw new Error("Invalid token type");
+    }
+
+    const user = await UserExpenseTracker.findOne({ telegramId: decoded.telegramId })
+      .select("telegramId tokenVersion")
+      .lean();
+
+    if (!user || (user.tokenVersion || 0) !== (decoded.tv || 0)) {
+      throw new Error("Token revoked");
+    }
+
+    setAccessCookie(res, signAccessToken(user));
+    return res.json({ success: true });
   } catch (error) {
-    console.log("❌ Invalid refresh token:", error.message);
-    res.clearCookie("accessToken");
-    res.clearCookie("refreshToken");
-    return res.status(403).json({
-      success: false,
-      message: "Invalid refresh token",
-    });
+    clearAuthCookies(res);
+    return res.status(403).json({ success: false, message: "Invalid refresh token" });
   }
 };
 
-// ✅ Logout endpoint
 const logout = async (req, res) => {
-  res.clearCookie("accessToken");
-  res.clearCookie("refreshToken");
-  res.json({ success: true, message: "Logged out successfully" });
+  try {
+    const token = req.cookies?.refreshToken;
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET, {
+        algorithms: ["HS256"],
+      });
+      if (decoded.typ === "refresh" && typeof decoded.telegramId === "string") {
+        await UserExpenseTracker.updateOne(
+          { telegramId: decoded.telegramId, tokenVersion: decoded.tv || 0 },
+          { $inc: { tokenVersion: 1 } }
+        );
+      }
+    }
+  } catch (error) {
+    console.warn("Logout without valid refresh token");
+  }
+
+  clearAuthCookies(res);
+  return res.json({ success: true, message: "Logged out successfully" });
 };
 
 module.exports = {

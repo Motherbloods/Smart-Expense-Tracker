@@ -1,18 +1,28 @@
 const UserExpenseTracker = require("../models/user");
+const { handleErrorResponse } = require("../helper/errorHelper.handler");
+const { parseNonNegativeAmount } = require("../utils/validators");
 
 const getUserData = async (req, res) => {
-  const { telegramId } = req.params;
+  const requested = typeof req.params.telegramId === "string" ? req.params.telegramId.trim() : "";
 
-  if (!telegramId || telegramId.trim() === "") {
+  if (!requested) {
     return res.status(400).json({
       success: false,
       message: "telegramId is required",
     });
   }
-  try {
-    const existingUser = await UserExpenseTracker.findOne({
-      telegramId: telegramId.trim(),
+
+  if (requested !== req.user.telegramId && req.user.role !== "admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Forbidden",
     });
+  }
+
+  try {
+    const existingUser = await UserExpenseTracker.findOne({ telegramId: requested })
+      .select("telegramId username budgetMontly role createdAt")
+      .lean();
 
     if (!existingUser) {
       return res.status(404).json({
@@ -27,48 +37,42 @@ const getUserData = async (req, res) => {
       data: existingUser,
     });
   } catch (e) {
-    console.error("Error retrieving user data:", e.message);
     return handleErrorResponse(res, "Error retrieving user data", e);
   }
 };
 
 const updateMonthlyBudget = async (req, res) => {
-  const { telegramId, budget } = req.body;
+  const budget = parseNonNegativeAmount(req.body?.budget);
 
-  if (!telegramId || !budget) {
+  if (budget === null) {
     return res.status(400).json({
       success: false,
-      message: "telegramId and budget are required",
+      message: "budget must be a valid non-negative number",
     });
   }
 
   try {
-    const existingUser = await UserExpenseTracker.findOne({
-      telegramId: telegramId.trim(),
-    });
+    const updatedUser = await UserExpenseTracker.findOneAndUpdate(
+      { telegramId: req.user.telegramId },
+      { $set: { budgetMontly: budget } },
+      { new: true }
+    )
+      .select("telegramId username budgetMontly role")
+      .lean();
 
-    if (!existingUser) {
+    if (!updatedUser) {
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
 
-    const updatedUser = await UserExpenseTracker.findOneAndUpdate(
-      {
-        telegramId: telegramId.trim(),
-      },
-      { budgetMontly: budget },
-      { new: true }
-    );
-    await updatedUser.save();
     return res.status(200).json({
       success: true,
       message: "Budget updated successfully",
       data: updatedUser,
     });
   } catch (e) {
-    console.error("Error updating budget:", e.message);
     return handleErrorResponse(res, "Error updating budget", e);
   }
 };
