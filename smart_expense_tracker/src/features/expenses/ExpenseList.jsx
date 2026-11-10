@@ -75,20 +75,20 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
     const conf =
       confidence !== undefined && confidence !== null ? confidence : 1;
     if (conf >= 0.9) return "bg-emerald-50 text-emerald-700 border-emerald-100";
-    if (conf >= 0.8) return "bg-blue-50 text-blue-700 border-blue-100";
+    if (conf >= 0.8) return "bg-teal-50 text-teal-700 border-teal-100";
     if (conf >= 0.7) return "bg-amber-50 text-amber-700 border-amber-100";
     return "bg-red-50 text-red-700 border-red-100";
   };
 
   const EmptyState = () => (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
-        <TrendingDown size={28} className="text-blue-400" />
+      <div className="w-14 h-14 bg-[var(--brand-tint)] rounded-lg flex items-center justify-center mb-4">
+        <TrendingDown size={26} className="text-[var(--brand)]" />
       </div>
       <p className="text-sm font-medium text-gray-700 mb-1">
         Belum ada data pengeluaran
       </p>
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-slate-500">
         Tambahkan pengeluaran pertama Anda di atas
       </p>
     </div>
@@ -99,10 +99,10 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 bg-slate-900/40"
           onClick={cancelDelete}
         />
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div role="dialog" aria-modal="true" className="relative bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden">
           <button
             onClick={cancelDelete}
             className="absolute top-4 right-4 w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
@@ -122,8 +122,8 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
                 "{expenseToDelete.name}"
               </span>{" "}
               senilai{" "}
-              <span className="font-semibold text-blue-600">
-                Rp {expenseToDelete.amount.toLocaleString()}
+              <span className="mono font-semibold text-[var(--expense)]">
+                Rp {expenseToDelete.amount.toLocaleString("id-ID")}
               </span>
             </p>
             <p className="text-xs text-red-500 mt-2">
@@ -133,13 +133,13 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
           <div className="px-6 pb-6 flex gap-3">
             <button
               onClick={cancelDelete}
-              className="flex-1 py-2.5 rounded-xl text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+              className="flex-1 py-2.5 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
             >
               Batal
             </button>
             <button
               onClick={confirmDelete}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
             >
               Ya, Hapus
             </button>
@@ -162,12 +162,12 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 bg-slate-900/40"
           onClick={closeDetailModal}
         />
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">
+        <div role="dialog" aria-modal="true" className="relative bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-[var(--border)] flex items-center justify-between">
+            <h3 className="form-title">
               Detail Pengeluaran
             </h3>
             <button
@@ -180,24 +180,24 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
 
           <div className="p-6 space-y-4">
             <div>
-              <p className="text-xs text-gray-400 mb-1 uppercase font-semibold tracking-wide">
+              <p className="text-xs font-semibold text-slate-500 mb-1">
                 Nama
               </p>
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="form-title">
                 {selectedExpense.name}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-gray-400 mb-1 uppercase font-semibold tracking-wide">
+                <p className="text-xs font-semibold text-slate-500 mb-1">
                   Jumlah
                 </p>
-                <p className="text-sm font-bold text-blue-600">
-                  Rp {selectedExpense.amount.toLocaleString()}
+                <p className="mono text-sm font-bold text-[var(--expense)]">
+                  Rp {selectedExpense.amount.toLocaleString("id-ID")}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-400 mb-1 uppercase font-semibold tracking-wide">
+                <p className="text-xs font-semibold text-slate-500 mb-1">
                   Tanggal
                 </p>
                 <p className="text-sm text-gray-700">
@@ -211,37 +211,37 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-gray-400 mb-2 uppercase font-semibold tracking-wide">
+                <p className="text-xs font-semibold text-slate-500 mb-2">
                   Kategori
                 </p>
-                <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-slate-100 text-slate-700 border border-slate-200">
                   {selectedExpense.category}
                 </span>
               </div>
               <div>
-                <p className="text-xs text-gray-400 mb-2 uppercase font-semibold tracking-wide">
+                <p className="text-xs font-semibold text-slate-500 mb-2">
                   Sumber
                 </p>
-                <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
                   {getSourceIncomeName(selectedExpense)}
                 </span>
               </div>
             </div>
 
-            <div className="p-4 bg-gray-50 rounded-xl">
+            <div className="p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
+                <p className="text-xs font-semibold text-slate-500">
                   Confidence
                 </p>
                 <span
-                  className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border ${getConfidenceBadgeColor(selectedExpense.confidence)}`}
+                  className={`px-2 py-0.5 text-xs font-semibold rounded-md border ${getConfidenceBadgeColor(selectedExpense.confidence)}`}
                 >
                   {confPct}%
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-1.5">
                 <div
-                  className={`h-1.5 rounded-full transition-all ${conf >= 0.9 ? "bg-emerald-500" : conf >= 0.8 ? "bg-blue-500" : conf >= 0.7 ? "bg-amber-500" : "bg-red-500"}`}
+                  className={`h-1.5 rounded-full transition-all ${conf >= 0.9 ? "bg-emerald-500" : conf >= 0.8 ? "bg-teal-500" : conf >= 0.7 ? "bg-amber-500" : "bg-red-500"}`}
                   style={{ width: `${confWidth}%` }}
                 />
               </div>
@@ -251,7 +251,7 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
           <div className="px-6 pb-6">
             <button
               onClick={closeDetailModal}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+              className="w-full py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
             >
               Tutup
             </button>
@@ -263,23 +263,23 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
 
   return (
     <>
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="form-card">
+        <div className="form-card__head">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center">
-              <TrendingDown size={16} className="text-blue-600" />
+            <div className="form-icon form-icon--expense">
+              <TrendingDown size={16} />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">
+              <h2 className="form-title">
                 Daftar Pengeluaran
               </h2>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="form-sub">
                 {expenses.length} entri tercatat
               </p>
             </div>
           </div>
           {totalPages > 1 && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-slate-500">
               Hal. {currentPage}/{totalPages}
             </span>
           )}
@@ -289,7 +289,7 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
           {currentData.length > 0 ? (
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50/70">
+                <tr className="bg-[var(--surface-2)]">
                   {[
                     "Nama",
                     "Jumlah",
@@ -300,18 +300,18 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
                   ].map((h) => (
                     <th
                       key={h}
-                      className="py-3 px-5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider"
+                      className={`py-2.5 px-5 text-xs font-semibold text-slate-500 ${h === "Jumlah" || h === "Aksi" ? "text-right" : "text-left"}`}
                     >
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-slate-100">
                 {currentData.map((expense) => (
                   <tr
                     key={expense._id}
-                    className="hover:bg-gray-50/50 transition-colors group"
+                    className="hover:bg-[var(--surface-2)] transition-colors group"
                   >
                     <td className="py-3.5 px-5">
                       <span
@@ -321,18 +321,18 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
                         {expense.name}
                       </span>
                     </td>
-                    <td className="py-3.5 px-5 whitespace-nowrap">
-                      <span className="text-sm font-semibold text-blue-600">
-                        Rp {expense.amount.toLocaleString()}
+                    <td className="py-3.5 px-5 whitespace-nowrap text-right">
+                      <span className="mono text-sm font-semibold text-[var(--expense)]">
+                        Rp {expense.amount.toLocaleString("id-ID")}
                       </span>
                     </td>
                     <td className="py-3.5 px-5 whitespace-nowrap">
-                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                      <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-slate-100 text-slate-700 border border-slate-200">
                         {expense.category}
                       </span>
                     </td>
                     <td className="py-3.5 px-5 whitespace-nowrap">
-                      <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                      <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
                         {getSourceIncomeName(expense)}
                       </span>
                     </td>
@@ -346,27 +346,30 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
                       </span>
                     </td>
                     <td className="py-3.5 px-5 whitespace-nowrap">
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => handleViewDetail(expense)}
-                          className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                          aria-label="Lihat detail"
+                          className="row-action"
                           title="Detail"
                         >
-                          <Eye size={13} className="text-gray-600" />
+                          <Eye size={15} />
                         </button>
                         <button
                           onClick={() => handleEdit(expense)}
-                          className="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 flex items-center justify-center transition-colors"
+                          aria-label="Edit"
+                          className="row-action"
                           title="Edit"
                         >
-                          <Edit size={13} className="text-indigo-600" />
+                          <Edit size={15} />
                         </button>
                         <button
                           onClick={() => handleDeleteClick(expense)}
-                          className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors"
+                          aria-label="Hapus"
+                          className="row-action row-action--danger"
                           title="Hapus"
                         >
-                          <Trash2 size={13} className="text-red-500" />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </td>
@@ -379,19 +382,19 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
           )}
         </div>
 
-        <div className="md:hidden divide-y divide-gray-50">
+        <div className="md:hidden divide-y divide-slate-100">
           {currentData.length > 0 ? (
             currentData.map((expense) => (
               <div
                 key={expense._id}
-                className="p-4 hover:bg-gray-50/50 transition-colors"
+                className="p-4 hover:bg-[var(--surface-2)] transition-colors"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="text-sm font-semibold text-gray-800">
                       {expense.name}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="form-sub">
                       {new Date(expense.date).toLocaleDateString("id-ID", {
                         day: "numeric",
                         month: "short",
@@ -402,48 +405,51 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleViewDetail(expense)}
-                      className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center"
+                      aria-label="Lihat detail"
+                      className="row-action"
                     >
-                      <Eye size={13} className="text-gray-600" />
+                      <Eye size={15} />
                     </button>
                     <button
                       onClick={() => handleEdit(expense)}
-                      className="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 flex items-center justify-center"
+                      aria-label="Edit"
+                      className="row-action"
                     >
-                      <Edit size={13} className="text-indigo-600" />
+                      <Edit size={15} />
                     </button>
                     <button
                       onClick={() => handleDeleteClick(expense)}
-                      className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center"
+                      aria-label="Hapus"
+                      className="row-action row-action--danger"
                     >
-                      <Trash2 size={13} className="text-red-500" />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs text-gray-400 mb-0.5">Jumlah</p>
-                    <p className="text-sm font-semibold text-blue-600">
-                      Rp {expense.amount.toLocaleString()}
+                    <p className="text-xs text-slate-500 mb-0.5">Jumlah</p>
+                    <p className="mono text-sm font-semibold text-[var(--expense)]">
+                      Rp {expense.amount.toLocaleString("id-ID")}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Confidence</p>
+                    <p className="text-xs text-slate-500 mb-1">Confidence</p>
                     <span
-                      className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getConfidenceBadgeColor(expense.confidence)}`}
+                      className={`px-2 py-0.5 text-xs font-medium rounded-md border ${getConfidenceBadgeColor(expense.confidence)}`}
                     >
                       {getConfidenceDisplay(expense.confidence)}%
                     </span>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Kategori</p>
-                    <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                    <p className="text-xs text-slate-500 mb-1">Kategori</p>
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-slate-100 text-slate-700 border border-slate-200">
                       {expense.category}
                     </span>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Sumber</p>
-                    <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                    <p className="text-xs text-slate-500 mb-1">Sumber</p>
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
                       {getSourceIncomeName(expense)}
                     </span>
                   </div>
@@ -456,7 +462,7 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
         </div>
 
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+          <div className="form-card__foot">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
@@ -470,7 +476,7 @@ function ExpenseList({ expenses = [], onDeleteExpense, handleEditExpense }) {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${page === currentPage ? "bg-blue-500 text-white" : "text-gray-500 hover:bg-gray-100"}`}
+                    className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${page === currentPage ? "bg-[var(--brand)] text-white" : "text-gray-500 hover:bg-gray-100"}`}
                   >
                     {page}
                   </button>
