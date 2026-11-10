@@ -5,7 +5,6 @@ const {
   getIncomesService,
 } = require("../services/income.service");
 const { handleErrorResponse } = require("../helper/errorHelper.handler");
-const ExpenseTracker = require("../models/expense");
 
 const getIncomes = async (req, res) => {
   try {
@@ -16,7 +15,6 @@ const getIncomes = async (req, res) => {
       data: incomes,
     });
   } catch (e) {
-    console.error("Error fetching incomes:", e.message);
     return handleErrorResponse(res, "Error fetching incomes", e);
   }
 };
@@ -24,31 +22,30 @@ const getIncomes = async (req, res) => {
 const createIncome = async (req, res) => {
   try {
     const newIncome = await createIncomeService(req.body, req.user.telegramId);
+    if (!newIncome) {
+      return res.status(400).json({
+        success: false,
+        message: "Data pemasukan tidak valid",
+      });
+    }
     return res.status(201).json({
       success: true,
       message: "Income created successfully",
       data: newIncome,
     });
   } catch (e) {
-    console.error("Error creating income:", e.message);
     return handleErrorResponse(res, "Error creating income", e);
   }
 };
 
-// ✅ FIXED - Parameter order: (incomeId, data, userId)
 const editIncome = async (req, res) => {
   try {
-    console.log("Editing income with ID:", req.params.id, req.body);
-    const updatedIncome = await editIncomeService(
-      req.params.id, // incomeId first
-      req.body, // data second
-      req.user.telegramId // userId third
-    );
+    const updatedIncome = await editIncomeService(req.params.id, req.body, req.user.telegramId);
 
     if (!updatedIncome) {
       return res.status(404).json({
         success: false,
-        message: "Income not found or unauthorized",
+        message: "Income not found, invalid data, or amount lower than the amount already used",
       });
     }
 
@@ -58,38 +55,18 @@ const editIncome = async (req, res) => {
       data: updatedIncome,
     });
   } catch (e) {
-    console.error("Error updating income:", e.message);
     return handleErrorResponse(res, "Error updating income", e);
   }
 };
 
 const deleteIncome = async (req, res) => {
   try {
-    const incomeId = req.params.id;
-
-    // Cek apakah income dipakai di expense
-    const usedInExpense = await ExpenseTracker.findOne({
-      incomeId: incomeId,
-    });
-
-    if (usedInExpense) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Income tidak bisa dihapus karena sudah dipakai pada pengeluaran",
-      });
-    }
-
-    // Kalau tidak dipakai, hapus income
-    const deletedIncome = await deleteIncomeService(
-      incomeId,
-      req.user.telegramId
-    );
+    const deletedIncome = await deleteIncomeService(req.params.id, req.user.telegramId);
 
     if (!deletedIncome) {
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
-        message: "Income not found or unauthorized",
+        message: "Income tidak ditemukan atau sudah dipakai pada pengeluaran",
       });
     }
 
@@ -99,7 +76,6 @@ const deleteIncome = async (req, res) => {
       data: deletedIncome,
     });
   } catch (e) {
-    console.error("Error deleting income:", e.message);
     return handleErrorResponse(res, "Error deleting income", e);
   }
 };

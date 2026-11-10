@@ -15,59 +15,63 @@ const getExpenses = async (req, res) => {
       data: expenses,
     });
   } catch (e) {
-    console.error("Error fetching expenses:", e.message);
     return handleErrorResponse(res, "Error fetching expenses", e);
   }
 };
 
 const createExpense = async (req, res) => {
   try {
-    const newExpense = await createExpenseService(
-      req.body,
-      req.user.telegramId
-    );
+    const newExpense = await createExpenseService(req.body, req.user.telegramId);
+    if (!newExpense) {
+      return res.status(400).json({
+        success: false,
+        message: "Data pengeluaran tidak valid atau sisa pemasukan tidak mencukupi",
+      });
+    }
     return res.status(201).json({
       success: true,
       message: "Expense created successfully",
       data: newExpense,
     });
   } catch (e) {
-    console.error("Error creating expense:", e.message);
     return handleErrorResponse(res, "Error creating expense", e);
   }
 };
 
 const editExpense = async (req, res) => {
   try {
-    const updatedExpense = await editExpenseService(
-      req.body,
-      req.params.id,
-      req.user.telegramId
-    );
+    const updatedExpense = await editExpenseService(req.body, req.params.id, req.user.telegramId);
+    if (!updatedExpense) {
+      return res.status(400).json({
+        success: false,
+        message: "Pengeluaran tidak ditemukan, data tidak valid, atau sisa pemasukan tidak mencukupi",
+      });
+    }
     return res.status(200).json({
       success: true,
       message: "Expense updated successfully",
       data: updatedExpense,
     });
   } catch (e) {
-    console.error("Error updating expense:", e.message);
     return handleErrorResponse(res, "Error updating expense", e);
   }
 };
 
 const deleteExpense = async (req, res) => {
   try {
-    const deletedExpense = await deleteExpenseService(
-      req.params.id,
-      req.user.telegramId
-    );
+    const deletedExpense = await deleteExpenseService(req.params.id, req.user.telegramId);
+    if (!deletedExpense) {
+      return res.status(404).json({
+        success: false,
+        message: "Expense not found",
+      });
+    }
     return res.status(200).json({
       success: true,
       message: "Expense deleted successfully",
       data: deletedExpense,
     });
   } catch (e) {
-    console.error("Error deleting expense:", e.message);
     return handleErrorResponse(res, "Error deleting expense", e);
   }
 };

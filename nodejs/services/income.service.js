@@ -1,62 +1,34 @@
 const IncomeTracker = require("../models/income");
+const ExpenseTracker = require("../models/expense");
 const { createActivityLog } = require("./activity.service");
+const { isObjectId, parseAmount, parseDate, sanitizeText } = require("../utils/validators");
 
-const getIncomesService = async (userId) => {
-  try {
-    return await IncomeTracker.find({ userId });
-  } catch (e) {
-    console.log("Error fetching incomes");
-    return [];
-  }
-};
+const MAX_INCOMES_PER_REQUEST = 5000;
+
+const getIncomesService = async (userId) =>
+  IncomeTracker.find({ userId }).sort({ date: -1, _id: -1 }).limit(MAX_INCOMES_PER_REQUEST).lean();
 
 const createIncomeService = async (data, userId, sourceIncome = "website") => {
   try {
-    const { name, amount, source, notes, date } = data;
+    const name = sanitizeText(data?.name, 100);
+    const source = sanitizeText(data?.source, 100);
+    const notes = sanitizeText(data?.notes, 200);
+    const amount = parseAmount(data?.amount);
+    const date = data?.date ? parseDate(data.date) : new Date();
 
-    // Validasi required fields
-    if (!name || !amount || !source) {
-      console.log(
-        "Missing required fields: name, amount, and source are required.",
-      );
-      return null;
-    }
+    if (!name || !source || !amount || !date) return null;
 
-    // Validasi amount
-    if (isNaN(amount) || amount <= 0) {
-      console.log("Amount must be a positive number.");
-      return null;
-    }
-
-    // Validasi panjang input
-    if (name.length > 100) {
-      console.log("Name is too long (max 100 characters).");
-      return null;
-    }
-
-    if (source.length > 100) {
-      console.log("Source is too long (max 100 characters).");
-      return null;
-    }
-
-    if (notes && notes.length > 200) {
-      console.log("Notes is too long (max 200 characters).");
-      return null;
-    }
-
-    const newIncome = new IncomeTracker({
-      userId: userId,
+    const savedIncome = await IncomeTracker.create({
+      userId,
       name,
       amount,
+      remainingAmount: amount,
       source,
-      notes: notes || "",
-      date: date || new Date(),
-      sourceIncome,
+      notes,
+      date,
+      sourceIncome: sourceIncome === "telegram" ? "telegram" : "website",
     });
 
-    const savedIncome = await newIncome.save();
-
-    // 🆕 Log activity
     await createActivityLog({
       userId,
       telegramId: userId,
@@ -67,141 +39,118 @@ const createIncomeService = async (data, userId, sourceIncome = "website") => {
       amount,
       source,
       notes,
-      description: `Pemasukan ${name} sebesar Rp ${amount.toLocaleString(
-        "id-ID",
-      )}`,
-      metadata: {
-        date: savedIncome.date,
-        remainingAmount: savedIncome.remainingAmount,
-      },
+      description: `Pemasukan ${name} sebesar Rp ${amount.toLocaleString("id-ID")}`,
+      metadata: { date: savedIncome.date, remainingAmount: savedIncome.remainingAmount },
       sourceUser: sourceIncome === "telegram" ? "Telegram Bot" : "Website",
     });
 
     return savedIncome;
   } catch (error) {
-    console.error("Error creating income:", error);
+    console.error("Error creating income:", error.message);
     return null;
   }
 };
 
-// ✅ FIXED - Parameter order: (incomeId, data, userId)
 const editIncomeService = async (incomeId, data, userId) => {
-  try {
-    const { name, source, amount, notes, date } = data;
+  if (!isObjectId(String(incomeId))) return null;
 
-    const income = await IncomeTracker.findById(incomeId);
+  const income = await IncomeTracker.findOne({ _id: incomeId, userId });
+  if (!income) return null;
 
-    if (!income) {
-      console.log("Income not found.");
-      return null;
-    }
+  const hasAmount = data?.amount !== undefined && data?.amount !== null && data?.amount !== "";
+  const newAmount = hasAmount ? parseAmount(data.amount) : income.amount;
+  if (!newAmount) return null;
 
-    if (income.userId.toString() !== userId.toString()) {
-      console.log("You are not authorized to edit this income.");
-      return null;
-    }
+  const changes = { amount: newAmount };
 
-    const oldAmount = income.amount;
-    const newAmount = amount;
-    const amountDifference = newAmount - oldAmount;
-
-    const newRemainingAmount = income.remainingAmount + amountDifference;
-
-    if (newRemainingAmount < 0) {
-      console.log(
-        "Cannot reduce income amount below used amount. Remaining would be negative.",
-      );
-      return null;
-    }
-
-    const updatedIncome = await IncomeTracker.findByIdAndUpdate(
-      incomeId,
-      {
-        userId,
-        name,
-        source,
-        amount: newAmount,
-        remainingAmount: newRemainingAmount,
-        notes,
-        date,
-      },
-      { new: true },
-    );
-
-    await createActivityLog({
-      userId,
-      telegramId: userId,
-      type: "income",
-      action: "update",
-      entityId: updatedIncome._id,
-      entityName: updatedIncome.name,
-      amount: updatedIncome.amount,
-      source: updatedIncome.source,
-      notes: updatedIncome.notes,
-      description: `Pemasukan ${
-        updatedIncome.name
-      } diupdate menjadi Rp ${updatedIncome.amount.toLocaleString("id-ID")}`,
-      metadata: {
-        oldAmount,
-        newAmount,
-        oldRemainingAmount: income.remainingAmount,
-        newRemainingAmount: updatedIncome.remainingAmount,
-        amountDifference,
-        date: updatedIncome.date,
-      },
-      sourceUser: "Website",
-    });
-
-    return updatedIncome;
-  } catch (error) {
-    console.error("Error in editIncomeService:", error);
-    throw error;
+  if (data?.name !== undefined) {
+    const name = sanitizeText(data.name, 100);
+    if (!name) return null;
+    changes.name = name;
   }
+  if (data?.source !== undefined) {
+    const source = sanitizeText(data.source, 100);
+    if (!source) return null;
+    changes.source = source;
+  }
+  if (data?.notes !== undefined) {
+    changes.notes = sanitizeText(data.notes, 200);
+  }
+  if (data?.date !== undefined && data?.date !== "") {
+    const date = parseDate(data.date);
+    if (!date) return null;
+    changes.date = date;
+  }
+
+  const oldAmount = income.amount;
+  const amountDifference = newAmount - oldAmount;
+
+  const updatedIncome = await IncomeTracker.findOneAndUpdate(
+    {
+      _id: incomeId,
+      userId,
+      amount: oldAmount,
+      remainingAmount: { $gte: -amountDifference },
+    },
+    { $set: changes, $inc: { remainingAmount: amountDifference } },
+    { new: true }
+  );
+
+  if (!updatedIncome) return null;
+
+  await createActivityLog({
+    userId,
+    telegramId: userId,
+    type: "income",
+    action: "update",
+    entityId: updatedIncome._id,
+    entityName: updatedIncome.name,
+    amount: updatedIncome.amount,
+    source: updatedIncome.source,
+    notes: updatedIncome.notes,
+    description: `Pemasukan ${updatedIncome.name} diupdate menjadi Rp ${updatedIncome.amount.toLocaleString("id-ID")}`,
+    metadata: {
+      oldAmount,
+      newAmount,
+      oldRemainingAmount: income.remainingAmount,
+      newRemainingAmount: updatedIncome.remainingAmount,
+      amountDifference,
+      date: updatedIncome.date,
+    },
+    sourceUser: "Website",
+  });
+
+  return updatedIncome;
 };
 
 const deleteIncomeService = async (incomeId, userId) => {
-  try {
-    const income = await IncomeTracker.findOne({ _id: incomeId, userId });
+  if (!isObjectId(String(incomeId))) return null;
 
-    if (!income) {
-      console.log("Income not found or you're not authorized to delete it.");
-      return null;
-    }
+  const income = await IncomeTracker.findOne({ _id: incomeId, userId });
+  if (!income) return null;
 
-    // Cek apakah ada expense yang menggunakan income ini
-    const ExpenseTracker = require("../models/expense");
-    const relatedExpenses = await ExpenseTracker.find({ incomeId: incomeId });
+  const inUse = await ExpenseTracker.exists({ incomeId, userId });
+  if (inUse) return null;
 
-    if (relatedExpenses.length > 0) {
-      console.log("Cannot delete income with related expenses.");
-      return null;
-    }
+  const deleted = await IncomeTracker.findOneAndDelete({ _id: incomeId, userId });
+  if (!deleted) return null;
 
-    // 🆕 Log activity sebelum delete
-    await createActivityLog({
-      userId,
-      telegramId: userId,
-      type: "income",
-      action: "delete",
-      entityId: income._id,
-      entityName: income.name,
-      amount: income.amount,
-      source: income.source,
-      notes: income.notes,
-      description: `Pemasukan ${
-        income.name
-      } sebesar Rp ${income.amount.toLocaleString("id-ID")} dihapus`,
-      metadata: {
-        deletedAt: new Date(),
-      },
-      sourceUser: "Website",
-    });
+  await createActivityLog({
+    userId,
+    telegramId: userId,
+    type: "income",
+    action: "delete",
+    entityId: deleted._id,
+    entityName: deleted.name,
+    amount: deleted.amount,
+    source: deleted.source,
+    notes: deleted.notes,
+    description: `Pemasukan ${deleted.name} sebesar Rp ${deleted.amount.toLocaleString("id-ID")} dihapus`,
+    metadata: { deletedAt: new Date() },
+    sourceUser: "Website",
+  });
 
-    return await IncomeTracker.findByIdAndDelete(incomeId);
-  } catch (error) {
-    console.error("Error deleting income:", error);
-    return null;
-  }
+  return deleted;
 };
 
 module.exports = {

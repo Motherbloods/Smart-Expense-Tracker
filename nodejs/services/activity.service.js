@@ -1,7 +1,10 @@
 const Activity = require("../models/activity");
 const UserExpenseTracker = require("../models/user");
+const { escapeRegex, clampInt } = require("../utils/validators");
 
-// Helper function untuk membuat log aktivitas
+const ALLOWED_TYPES = ["expense", "income"];
+const ALLOWED_ACTIONS = ["create", "update", "delete"];
+
 const createActivityLog = async ({
   userId,
   telegramId,
@@ -18,8 +21,7 @@ const createActivityLog = async ({
   sourceUser = "Telegram Bot",
 }) => {
   try {
-    // Ambil userName dari database
-    const user = await UserExpenseTracker.findOne({ telegramId });
+    const user = await UserExpenseTracker.findOne({ telegramId }).select("username").lean();
     const userName = user ? user.username || "Unknown User" : "Unknown User";
 
     const activity = new Activity({
@@ -40,132 +42,80 @@ const createActivityLog = async ({
     });
 
     await activity.save();
-    console.log(`✅ Activity log created: ${type} ${action}`);
     return activity;
   } catch (error) {
-    console.error("❌ Error creating activity log:", error);
+    console.error("Error creating activity log:", error.message);
     return null;
   }
 };
 
-// Get activities dengan filter
-// Get activities dengan filter
+const parseFilterDate = (value) => {
+  if (typeof value !== "string" || value === "") return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const getActivitiesService = async (userId, filters = {}) => {
-  try {
-    console.log("🔥 [SERVICE] getActivitiesService DIPANGGIL");
-    console.log("👤 User ID:", userId);
-    console.log("📋 Filters diterima:", filters);
+  const query = {};
 
-    const query = {};
-
-    // Hanya tambahkan filter userId jika userId ada dan bukan null
-    if (userId !== null && userId !== undefined) {
-      query.userId = userId;
-      console.log("🔒 Filter by userId:", userId);
-    } else {
-      console.log("👑 Admin mode: Mengambil semua data tanpa filter userId");
-    }
-
-    // Filter berdasarkan type (expense/income)
-    if (filters.type && filters.type !== "all") {
-      query.type = filters.type;
-      console.log("📌 Filter type:", filters.type);
-    }
-
-    // Filter berdasarkan action
-    if (filters.action) {
-      query.action = filters.action;
-      console.log("📌 Filter action:", filters.action);
-    }
-
-    // Filter berdasarkan date range
-    if (filters.startDate || filters.endDate) {
-      query.createdAt = {};
-      if (filters.startDate) {
-        query.createdAt.$gte = new Date(filters.startDate);
-        console.log("📅 Start Date:", filters.startDate);
-      }
-      if (filters.endDate) {
-        query.createdAt.$lte = new Date(filters.endDate);
-        console.log("📅 End Date:", filters.endDate);
-      }
-    }
-
-    // Search query
-    if (filters.search) {
-      query.$or = [
-        { entityName: { $regex: filters.search, $options: "i" } },
-        { category: { $regex: filters.search, $options: "i" } },
-        { source: { $regex: filters.search, $options: "i" } },
-        { userName: { $regex: filters.search, $options: "i" } },
-      ];
-      console.log("🔎 Search:", filters.search);
-    }
-
-    console.log(
-      "🧩 Final Query yang dikirim ke MongoDB:",
-      JSON.stringify(query, null, 2)
-    );
-    console.log("📢 Limit:", filters.limit || 100);
-
-    const activities = await Activity.find(query)
-      .sort({ createdAt: -1 })
-      .limit(filters.limit || 100);
-
-    console.log("✅ Jumlah hasil:", activities.length);
-
-    // Debug: tampilkan sample data jika ada
-    if (activities.length > 0) {
-      console.log("📄 Sample data pertama:", activities[0]);
-    }
-
-    return activities;
-  } catch (error) {
-    console.error("❌ Error fetching activities:", error);
-    return [];
+  if (userId !== null && userId !== undefined) {
+    query.userId = String(userId);
   }
+
+  if (typeof filters.type === "string" && ALLOWED_TYPES.includes(filters.type)) {
+    query.type = filters.type;
+  }
+
+  if (typeof filters.action === "string" && ALLOWED_ACTIONS.includes(filters.action)) {
+    query.action = filters.action;
+  }
+
+  const startDate = parseFilterDate(filters.startDate);
+  const endDate = parseFilterDate(filters.endDate);
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) query.createdAt.$gte = startDate;
+    if (endDate) query.createdAt.$lte = endDate;
+  }
+
+  if (typeof filters.search === "string" && filters.search.trim() !== "") {
+    const pattern = escapeRegex(filters.search.trim().slice(0, 100));
+    query.$or = [
+      { entityName: { $regex: pattern, $options: "i" } },
+      { category: { $regex: pattern, $options: "i" } },
+      { source: { $regex: pattern, $options: "i" } },
+      { userName: { $regex: pattern, $options: "i" } },
+    ];
+  }
+
+  const limit = clampInt(filters.limit, 1, 200, 100);
+
+  return Activity.find(query).sort({ createdAt: -1 }).limit(limit).lean();
 };
 
-// Get activity statistics
 const getActivityStatsService = async (userId) => {
-  try {
-    const stats = await Activity.aggregate([
-      { $match: { userId } },
-      {
-        $group: {
-          _id: {
-            type: "$type",
-            action: "$action",
-          },
-          count: { $sum: 1 },
-          totalAmount: { $sum: "$amount" },
-        },
-      },
-    ]);
-
-    return stats;
-  } catch (error) {
-    console.error("Error fetching activity stats:", error);
-    return [];
+  const match = {};
+  if (userId !== null && userId !== undefined) {
+    match.userId = String(userId);
   }
+
+  return Activity.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: { type: "$type", action: "$action" },
+        count: { $sum: 1 },
+        totalAmount: { $sum: "$amount" },
+      },
+    },
+  ]);
 };
 
-// Delete old activities (cleanup)
 const cleanupOldActivities = async (daysToKeep = 90) => {
-  try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-
-    const result = await Activity.deleteMany({
-      createdAt: { $lt: cutoffDate },
-    });
-
-    console.log(`🗑️ Cleaned up ${result.deletedCount} old activities`);
-    return result.deletedCount;
-  } catch (error) {
-    console.error("Error cleaning up activities:", error);
-    return 0;
-  }
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+  const result = await Activity.deleteMany({ createdAt: { $lt: cutoffDate } });
+  return result.deletedCount;
 };
 
 module.exports = {
