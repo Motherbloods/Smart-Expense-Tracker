@@ -67,7 +67,6 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
         if (storedUser) {
             try {
                 const userData = JSON.parse(storedUser);
-                console.log("Parsed user data:", userData);
                 setUser(userData);
                 setUserRole(userData.role || 'user');
             } catch (error) {
@@ -134,7 +133,6 @@ function Sidebar({ currentPage, onPageChange, onCollapseChange }) {
     // ✅ Logout handler - akan clear cookies di backend
     const handleLogout = useCallback(async () => {
         if (isLoggingOut) {
-            console.log("Already logging out...");
             return;
         }
 

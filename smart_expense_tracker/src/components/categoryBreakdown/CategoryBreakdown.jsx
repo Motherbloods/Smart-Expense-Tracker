@@ -25,7 +25,6 @@ function CategoryBreakdown({ expenses }) {
   const { categoryData, totalAmount } = useMemo(() => {
     const totals = {};
     let sum = 0;
-    console.log("Calculating category breakdown for expenses:", expenses);
     expenses.forEach((expense) => {
       const category = expense.category || "Tidak Diketahui";
       if (!totals[category]) {

@@ -3,10 +3,12 @@ import { lazy, Suspense } from "react";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useEffect } from "react";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Login = lazy(() => import("./pages/Login"));
+const Landing = lazy(() => import("./pages/Landing"));
+const Privasi = lazy(() => import("./pages/Privasi"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 const AktivitasPengguna = lazy(() => import("./pages/AktivitasPengguna"));
 const Laporan = lazy(() => import("./pages/Laporan"));
 const AdminLaporan = lazy(() => import("./pages/LaporanKeseluruhan"));
@@ -20,66 +22,62 @@ const PageLoader = () => (
   </div>
 );
 
-// ✅ Component untuk 404 / Invalid Route
-const NotFound = () => {
-  const getUserRole = () => {
-    try {
-      const userData = localStorage.getItem("userData");
-      if (userData) {
-        return JSON.parse(userData).role || 'user';
-      }
-    } catch (error) {
-      console.error("Error parsing user:", error);
+const isAuthenticated = () => Boolean(localStorage.getItem("telegramId"));
+
+const getUserRole = () => {
+  try {
+    const userData = localStorage.getItem("userData");
+    if (userData) {
+      return JSON.parse(userData).role || "user";
     }
-    return 'user';
-  };
-
-  const role = getUserRole();
-  // ✅ Cek auth hanya dari telegramId (token ada di cookies)
-  const isAuthenticated = localStorage.getItem("telegramId");
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  } catch {
+    return "user";
   }
+  return "user";
+};
 
-  // Redirect based on role
-  if (role === 'admin') {
+const NotFound = () => {
+  if (!isAuthenticated()) {
+    return <NotFoundPage />;
+  }
+  if (getUserRole() === "admin") {
     return <Navigate to="/aktivitas-pengguna" replace />;
   }
   return <Navigate to="/" replace />;
 };
 
+const LoginRoute = () => {
+  if (!isAuthenticated()) {
+    return <Login />;
+  }
+  return getUserRole() === "admin" ? (
+    <Navigate to="/aktivitas-pengguna" replace />
+  ) : (
+    <Navigate to="/" replace />
+  );
+};
+
+const HomeRoute = () => {
+  if (!isAuthenticated()) {
+    return <Landing />;
+  }
+  return (
+    <ProtectedRoute allowedRoles={["user"]}>
+      <Dashboard />
+    </ProtectedRoute>
+  );
+};
+
 function App() {
-  useEffect(() => {
-    console.log("🔍 App mounted");
-    console.log("telegramId:", localStorage.getItem("telegramId"));
-    console.log("userData:", localStorage.getItem("userData"));
-  }, []);
   return (
     <Router>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          {/* ✅ Login Route */}
-          <Route
-            path="/login"
-            element={
-              !localStorage.getItem("telegramId") ? (
-                <Login />
-              ) : (
-                <NotFound />
-              )
-            }
-          />
+          <Route path="/login" element={<LoginRoute />} />
+          <Route path="/privasi" element={<Privasi />} />
 
           {/* ✅ User Routes */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute allowedRoles={['user']}>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/" element={<HomeRoute />} />
           <Route
             path="/laporan"
             element={

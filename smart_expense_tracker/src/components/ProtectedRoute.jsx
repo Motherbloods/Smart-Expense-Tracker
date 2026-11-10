@@ -1,17 +1,14 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useMemo } from 'react';
-import { useEffect } from 'react';
+import usePageMeta from '../hooks/usePageMeta';
 
 function ProtectedRoute({ children, allowedRoles = [] }) {
     const location = useLocation();
-    useEffect(() => {
-        console.log("🔍 ProtectedRoute check:", {
-            path: location.pathname,
-            telegramId: localStorage.getItem("telegramId"),
-            userData: localStorage.getItem("userData")
-        });
-    }, [location]);
-
+    usePageMeta({
+        title: 'Dashboard | Smart Expense Tracker',
+        robots: 'noindex,nofollow',
+        path: location.pathname,
+    });
     // ✅ Cek auth hanya dari telegramId (token ada di HttpOnly cookies)
     const telegramId = localStorage.getItem("telegramId");
     const isAuthenticated = Boolean(telegramId);
@@ -33,7 +30,6 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
 
     // ✅ Check authentication first
     if (!isAuthenticated) {
-        console.log("🔒 Not authenticated, redirecting to login");
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
@@ -41,7 +37,6 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
     if (allowedRoles.length === 0) {
         return children;
     }
-    console.log("👤 User data:", userData?.role);
     // ✅ Check user role
     const userRole = userData?.role || 'user';
 
@@ -51,7 +46,6 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
     }
 
     // ✅ If role not allowed, redirect to appropriate page
-    console.log(`🚫 Access denied for role: ${userRole}. Allowed: ${allowedRoles.join(', ')}`);
 
     if (userRole === 'admin') {
         return <Navigate to="/aktivitas-pengguna" replace />;
