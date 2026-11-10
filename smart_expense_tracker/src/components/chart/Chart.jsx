@@ -124,131 +124,130 @@ function Chart({ expenses = [], incomes = [] }) {
         }
     }, [viewMode, expenses, incomes]); // Hanya re-compute saat ini berubah
 
-    const handleViewModeChange = (e) => {
-        setViewMode(e.target.value);
-    };
-
-    // Configure x-axis data key based on view mode
     const getXAxisDataKey = () => {
         if (viewMode === "daily") return "date";
         if (viewMode === "weekly") return "week";
         return "month";
     };
 
-    // Get chart title based on view mode
-    const getChartTitle = () => {
-        if (viewMode === "daily") return "Grafik Harian";
-        if (viewMode === "weekly") return "Grafik Mingguan";
-        return "Grafik Bulanan";
+    const formatAxisValue = (value) => {
+        if (value >= 1000000) {
+            return `${(value / 1000000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} jt`;
+        }
+        if (value >= 1000) {
+            return `${(value / 1000).toLocaleString("id-ID", { maximumFractionDigits: 0 })} rb`;
+        }
+        return value.toLocaleString("id-ID");
     };
 
+    const viewOptions = [
+        { value: "daily", label: "Harian" },
+        { value: "weekly", label: "Mingguan" },
+        { value: "monthly", label: "Bulanan" },
+    ];
+
+    const axisTick = { fontSize: 12, fill: "#64748b" };
+
     return (
-        <>
-            <div className="lg:col-span-1">
-                <div className="flex items-center justify-between px-4 pt-4 bg-white shadow-md rounded-t-lg">
-                    <h1 className="text-lg font-semibold">{getChartTitle()}</h1>
-                    <div className="relative">
-                        <select
-                            value={viewMode}
-                            onChange={handleViewModeChange}
-                            className="block appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 px-4 py-2 pr-10 rounded shadow leading-tight focus:outline-none focus:shadow-outline"
-                        >
-                            <option value="daily">Per Hari</option>
-                            <option value="weekly">Per Minggu</option>
-                            <option value="monthly">Per Bulan</option>
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-600">
-                            <svg
-                                className="w-4 h-4"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
-                    </div>
+        <div>
+            <div className="chart-toolbar">
+                <div className="chart-legend">
+                    <span className="chart-legend__item">
+                        <span className="chart-legend__dot" style={{ background: "var(--income)" }} />
+                        Pemasukan
+                    </span>
+                    <span className="chart-legend__item">
+                        <span className="chart-legend__dot" style={{ background: "var(--expense)" }} />
+                        Pengeluaran
+                    </span>
                 </div>
-
-                <div className="bg-white px-4 pb-4 shadow-md rounded-b-lg">
-                    <div className="h-64 pt-4">
-                        {chartData && chartData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart
-                                    data={chartData}
-                                    margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
-                                >
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis
-                                        dataKey={getXAxisDataKey()}
-                                        angle={viewMode === "monthly" ? -45 : 0}
-                                        textAnchor={viewMode === "monthly" ? "end" : "middle"}
-                                        height={viewMode === "monthly" ? 80 : 60}
-                                    />
-                                    <YAxis
-                                        tickFormatter={(value) => `Rp ${(value / 1000).toLocaleString("id-ID")}k`}
-                                    />
-                                    <Tooltip
-                                        formatter={(value, name) => [
-                                            `Rp ${value.toLocaleString("id-ID")}`,
-                                            name === "expenses" ? "Pengeluaran" : "Pemasukan"
-                                        ]}
-                                        labelFormatter={(label) => {
-                                            if (viewMode === "daily") return `Tanggal ${label}`;
-                                            if (viewMode === "weekly") return label;
-                                            return `Bulan: ${label}`;
-                                        }}
-                                    />
-                                    {/* Income Line */}
-                                    <Line
-                                        type="monotone"
-                                        dataKey="incomes"
-                                        stroke="#22c55e"
-                                        strokeWidth={2}
-                                        activeDot={{ r: 6, fill: "#22c55e" }}
-                                        dot={{ fill: "#22c55e", strokeWidth: 2, r: 4 }}
-                                        name="incomes"
-                                    />
-                                    {/* Expense Line */}
-                                    <Line
-                                        type="monotone"
-                                        dataKey="expenses"
-                                        stroke="#ef4444"
-                                        strokeWidth={2}
-                                        activeDot={{ r: 6, fill: "#ef4444" }}
-                                        dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
-                                        name="expenses"
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-gray-500">
-                                <div className="text-center">
-                                    <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                    </svg>
-                                    <p className="text-lg font-medium">Tidak ada data transaksi</p>
-                                    <p className="text-sm">untuk periode yang dipilih</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Legend */}
-                    <div className="flex justify-center gap-6 mt-4 pt-4 border-t border-gray-100">
-                        <div className="flex items-center gap-2">
-                            <div className="w-4 h-0.5 bg-green-500 rounded"></div>
-                            <span className="text-sm text-gray-600">Pemasukan</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-4 h-0.5 bg-red-500 rounded"></div>
-                            <span className="text-sm text-gray-600">Pengeluaran</span>
-                        </div>
-                    </div>
+                <div className="seg" role="group" aria-label="Rentang grafik">
+                    {viewOptions.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setViewMode(option.value)}
+                            aria-pressed={viewMode === option.value}
+                            className={viewMode === option.value ? "is-active" : ""}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
                 </div>
             </div>
-        </>
+
+            <div className="h-64">
+                {chartData && chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                            data={chartData}
+                            margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                        >
+                            <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
+                            <XAxis
+                                dataKey={getXAxisDataKey()}
+                                tick={axisTick}
+                                tickLine={false}
+                                axisLine={{ stroke: "#e2e8f0" }}
+                                tickFormatter={(value) => (viewMode === "monthly" ? String(value).slice(0, 3) : value)}
+                                interval={viewMode === "daily" ? 2 : 0}
+                                tickMargin={8}
+                            />
+                            <YAxis
+                                tick={axisTick}
+                                tickLine={false}
+                                axisLine={false}
+                                width={52}
+                                tickFormatter={formatAxisValue}
+                            />
+                            <Tooltip
+                                cursor={{ stroke: "#cbd5e1" }}
+                                contentStyle={{
+                                    borderRadius: 8,
+                                    border: "1px solid #e2e8f0",
+                                    boxShadow: "none",
+                                    fontSize: 13,
+                                }}
+                                formatter={(value, name) => [
+                                    `Rp ${value.toLocaleString("id-ID")}`,
+                                    name === "expenses" ? "Pengeluaran" : "Pemasukan"
+                                ]}
+                                labelFormatter={(label) => {
+                                    if (viewMode === "daily") return `Tanggal ${label}`;
+                                    if (viewMode === "weekly") return label;
+                                    return `Bulan: ${label}`;
+                                }}
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="incomes"
+                                stroke="#047857"
+                                strokeWidth={2}
+                                dot={false}
+                                activeDot={{ r: 4, fill: "#047857", stroke: "#fff", strokeWidth: 2 }}
+                                name="incomes"
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="expenses"
+                                stroke="#dc2626"
+                                strokeWidth={2}
+                                dot={false}
+                                activeDot={{ r: 4, fill: "#dc2626", stroke: "#fff", strokeWidth: 2 }}
+                                name="expenses"
+                            />
+                        </LineChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div className="flex h-full items-center justify-center text-center">
+                        <div>
+                            <p className="text-sm font-semibold text-slate-600">Tidak ada data transaksi</p>
+                            <p className="text-sm text-slate-500">untuk periode yang dipilih</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }
 
