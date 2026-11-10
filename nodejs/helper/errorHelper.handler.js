@@ -1,9 +1,8 @@
 const handleErrorResponse = (res, errorMessage, errorDetails) => {
-  console.error(errorDetails);
+  console.error(errorMessage, errorDetails && errorDetails.message);
   return res.status(500).json({
     success: false,
     message: errorMessage,
-    error: errorDetails.message,
   });
 };
 

@@ -1,39 +1,43 @@
 const jwt = require("jsonwebtoken");
+const User = require("../models/user");
+
+const reject = (res, status, message, code) =>
+  res.status(status).json({ success: false, message, code });
 
 const authMiddleware = async (req, res, next) => {
+  const token = req.cookies?.accessToken;
+
+  if (!token) {
+    return reject(res, 401, "Authentication required", "NO_TOKEN");
+  }
+
+  let decoded;
   try {
-    // ✅ Ambil token dari cookie (bukan dari header)
-    const token = req.cookies.accessToken;
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "No token provided",
-      });
-    }
-
-    // ✅ Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // ✅ Attach user info ke request
-    req.user = {
-      telegramId: decoded.telegramId,
-    };
-
-    next();
+    decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({
-        success: false,
-        message: "Token expired",
-        code: "TOKEN_EXPIRED",
-      });
+      return reject(res, 401, "Token expired", "TOKEN_EXPIRED");
+    }
+    return reject(res, 401, "Invalid token", "INVALID_TOKEN");
+  }
+
+  if (decoded.typ !== "access" || typeof decoded.telegramId !== "string") {
+    return reject(res, 401, "Invalid token", "INVALID_TOKEN");
+  }
+
+  try {
+    const user = await User.findOne({ telegramId: decoded.telegramId })
+      .select("telegramId role tokenVersion")
+      .lean();
+
+    if (!user || (user.tokenVersion || 0) !== (decoded.tv || 0)) {
+      return reject(res, 401, "Invalid token", "INVALID_TOKEN");
     }
 
-    return res.status(403).json({
-      success: false,
-      message: "Invalid token",
-    });
+    req.user = { telegramId: user.telegramId, role: user.role || "user" };
+    return next();
+  } catch (error) {
+    return next(error);
   }
 };
 
