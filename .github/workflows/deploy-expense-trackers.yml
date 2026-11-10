@@ -2,79 +2,206 @@ name: Deploy Smart Expense Tracker Production
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smart-expense-tracker-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  deploys:
-    runs-on: self-hosted
-
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout main branch
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
         with:
-          ref: main
-          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            nodejs/package-lock.json
+            smart_expense_tracker/package-lock.json
+
+      - name: Backend install, audit and test
+        working-directory: nodejs
+        run: |
+          npm ci --no-fund
+          npm audit --omit=dev --audit-level=high
+          npm test
+
+      - name: Frontend install, audit, lint and test
+        working-directory: smart_expense_tracker
+        run: |
+          npm ci --no-fund
+          npm audit --omit=dev --audit-level=high
+          npx eslint . --quiet
+          npm test
+
+      - name: Frontend production build
+        working-directory: smart_expense_tracker
+        env:
+          VITE_SITE_URL: https://example.invalid
+        run: |
+          npm run build
+          test -f dist/index.html
+          test -f dist/robots.txt
+          test -f dist/sitemap.xml
+          test -f dist/login/index.html
+          test -f dist/privasi/index.html
+
+  deploy:
+    needs: verify
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Create Backend Env
+        env:
+          EXPENSE_ENV_BE: ${{ secrets.EXPENSE_ENV_BE }}
         run: |
-          printf "%s" "${{ secrets.EXPENSE_ENV_BE }}" > $GITHUB_WORKSPACE/nodejs/.env
+          umask 077
+          printf '%s' "$EXPENSE_ENV_BE" > "$GITHUB_WORKSPACE/nodejs/.env"
 
       - name: Create Frontend Env
+        env:
+          EXPENSE_ENV_FE: ${{ secrets.EXPENSE_ENV_FE }}
         run: |
-          printf "%s" "${{ secrets.EXPENSE_ENV_FE }}" > $GITHUB_WORKSPACE/smart_expense_tracker/.env
+          umask 077
+          printf '%s' "$EXPENSE_ENV_FE" > "$GITHUB_WORKSPACE/smart_expense_tracker/.env"
 
       - name: Ensure network exists
         run: |
           docker network inspect n8n-network >/dev/null 2>&1 || docker network create n8n-network
 
-      - name: Build Backend
+      - name: Build images
         run: |
-          docker build \
-            -t smart-expense-api-image \
-            $GITHUB_WORKSPACE/nodejs
+          set -euo pipefail
+          for image in smart-expense-api-image smart-expense-tracker-image; do
+            if docker image inspect "$image:latest" >/dev/null 2>&1; then
+              docker tag "$image:latest" "$image:previous"
+            fi
+          done
 
-      - name: Restart Backend
-        run: |
-          docker rm -f expense-api || true
-          docker run -d \
-            --name expense-api \
-            -p 3002:3000 \
-            --network n8n-network \
-            --restart unless-stopped \
-            --env-file $GITHUB_WORKSPACE/nodejs/.env \
-            --cap-drop ALL \
-            smart-expense-api-image
+          docker build -t smart-expense-api-image:latest "$GITHUB_WORKSPACE/nodejs"
 
-      - name: Build Frontend
-        run: |
           set -a
-          . $GITHUB_WORKSPACE/smart_expense_tracker/.env
+          . "$GITHUB_WORKSPACE/smart_expense_tracker/.env"
           set +a
 
           docker build \
-            --build-arg VITE_API_URL="$VITE_API_URL" \
-            --build-arg VITE_TELEGRAM_BOT_LINK="$VITE_TELEGRAM_BOT_LINK" \
-            --build-arg VITE_PUSHER_KEY="$VITE_PUSHER_KEY" \
-            --build-arg VITE_PUSHER_CLUSTER="$VITE_PUSHER_CLUSTER" \
-            --build-arg VITE_PUSHER_SUBSCRIBE="$VITE_PUSHER_SUBSCRIBE" \
-            -t smart-expense-tracker-image \
-            $GITHUB_WORKSPACE/smart_expense_tracker
+            --build-arg VITE_API_URL="${VITE_API_URL:-}" \
+            --build-arg VITE_SITE_URL="${VITE_SITE_URL:-}" \
+            --build-arg VITE_TELEGRAM_BOT_LINK="${VITE_TELEGRAM_BOT_LINK:-}" \
+            --build-arg VITE_PUSHER_KEY="${VITE_PUSHER_KEY:-}" \
+            --build-arg VITE_PUSHER_CLUSTER="${VITE_PUSHER_CLUSTER:-}" \
+            --build-arg VITE_PUSHER_BIND="${VITE_PUSHER_BIND:-}" \
+            -t smart-expense-tracker-image:latest \
+            "$GITHUB_WORKSPACE/smart_expense_tracker"
 
-      - name: Restart Frontend
+      - name: Deploy backend with smoke test and rollback
         run: |
-          docker rm -f smart_expense_tracker || true
-          docker run -d \
-            --name smart_expense_tracker \
-            -p 8082:80 \
-            --restart unless-stopped \
-            --network n8n-network \
-            --cap-drop ALL \
-            --cap-add SETGID \
-            --cap-add SETUID \
-            --cap-add NET_BIND_SERVICE \
-            smart-expense-tracker-image
+          set -uo pipefail
+
+          run_api() {
+            docker rm -f expense-api >/dev/null 2>&1 || true
+            docker run -d \
+              --name expense-api \
+              -p 3002:3000 \
+              --network n8n-network \
+              --restart unless-stopped \
+              --env-file "$GITHUB_WORKSPACE/nodejs/.env" \
+              --cap-drop ALL \
+              --security-opt no-new-privileges \
+              "$1"
+          }
+
+          healthy() {
+            for _ in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:3002/health >/dev/null 2>&1; then
+                return 0
+              fi
+              sleep 2
+            done
+            return 1
+          }
+
+          run_api smart-expense-api-image:latest
+          if healthy; then
+            echo "Backend healthy"
+            exit 0
+          fi
+
+          echo "Backend failed health check"
+          docker logs --tail 30 expense-api 2>&1 | sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g' || true
+          if docker image inspect smart-expense-api-image:previous >/dev/null 2>&1; then
+            echo "Rolling back backend"
+            run_api smart-expense-api-image:previous
+            healthy && echo "Rollback healthy" || echo "Rollback also failed"
+          fi
+          exit 1
+
+      - name: Deploy frontend with smoke test and rollback
+        run: |
+          set -uo pipefail
+
+          run_fe() {
+            docker rm -f smart_expense_tracker >/dev/null 2>&1 || true
+            docker run -d \
+              --name smart_expense_tracker \
+              -p 8082:80 \
+              --restart unless-stopped \
+              --network n8n-network \
+              --cap-drop ALL \
+              --cap-add SETGID \
+              --cap-add SETUID \
+              --cap-add NET_BIND_SERVICE \
+              --security-opt no-new-privileges \
+              "$1"
+          }
+
+          smoke() {
+            sleep 3
+            curl -fsS http://127.0.0.1:8082/ >/dev/null || return 1
+            curl -fsS http://127.0.0.1:8082/robots.txt | grep -q "User-agent" || return 1
+            curl -fsSI http://127.0.0.1:8082/laporan | grep -qi "x-robots-tag: noindex" || return 1
+            code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8082/halaman-yang-tidak-ada)"
+            [ "$code" = "404" ] || return 1
+          }
+
+          run_fe smart-expense-tracker-image:latest
+          if smoke; then
+            echo "Frontend healthy"
+            exit 0
+          fi
+
+          echo "Frontend smoke test failed"
+          if docker image inspect smart-expense-tracker-image:previous >/dev/null 2>&1; then
+            echo "Rolling back frontend"
+            run_fe smart-expense-tracker-image:previous
+          fi
+          exit 1
+
+      - name: Prune old images
+        if: success()
+        run: docker image prune -f
 
       - name: Cleanup Env Files
         if: always()
         run: |
-          rm -f $GITHUB_WORKSPACE/nodejs/.env
-          rm -f $GITHUB_WORKSPACE/smart_expense_tracker/.env
+          rm -f "$GITHUB_WORKSPACE/nodejs/.env"
+          rm -f "$GITHUB_WORKSPACE/smart_expense_tracker/.env"
