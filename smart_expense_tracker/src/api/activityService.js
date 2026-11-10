@@ -36,7 +36,6 @@ export const getActivities = async (filters = {}) => {
       const response = await axiosInstance.get(
         `/activities?${params.toString()}`
       );
-      console.log("🔥 Fetched activities from API");
       return response;
     },
     1 * 60 * 1000 // Cache 1 menit
@@ -51,7 +50,6 @@ export const getActivityStats = async () => {
     `activity_stats_${telegramId}`,
     async () => {
       const response = await axiosInstance.get("/activities/stats");
-      console.log("📊 Fetched activity stats from API");
       return response;
     },
     2 * 60 * 1000 // Cache 2 menit
@@ -68,7 +66,6 @@ export const invalidateActivityCache = () => {
     }
   });
   apiCache.invalidate(`activity_stats_${telegramId}`);
-  console.log("✅ Activity cache invalidated");
 };
 
 export default axiosInstance;

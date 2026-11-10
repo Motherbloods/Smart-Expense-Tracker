@@ -8,7 +8,6 @@ export const getAllUsers = async () => {
     `admin_users`,
     async () => {
       const response = await axiosInstance.get("/admin/users");
-      console.log("📥 Fetched all users from API");
       return response;
     },
     2 * 60 * 1000 // Cache 2 menit
@@ -25,7 +24,6 @@ export const getAllExpenses = async (month, year) => {
       const response = await axiosInstance.get("/admin/expenses", {
         params: { month, year },
       });
-      console.log("📥 Fetched all expenses from API");
       return response;
     },
     2 * 60 * 1000 // Cache 2 menit
@@ -42,7 +40,6 @@ export const getAllIncomes = async (month, year) => {
       const response = await axiosInstance.get("/admin/incomes", {
         params: { month, year },
       });
-      console.log("📥 Fetched all incomes from API");
       return response;
     },
     2 * 60 * 1000 // Cache 2 menit
@@ -59,7 +56,6 @@ export const getAdminSummary = async (month, year) => {
       const response = await axiosInstance.get("/admin/summary", {
         params: { month, year },
       });
-      console.log("📥 Fetched admin summary from API");
       return response;
     },
     2 * 60 * 1000 // Cache 2 menit
@@ -72,5 +68,4 @@ export const invalidateAdminCache = () => {
   apiCache.invalidate("admin_expenses");
   apiCache.invalidate("admin_incomes");
   apiCache.invalidate("admin_summary");
-  console.log("✅ Admin cache invalidated");
 };

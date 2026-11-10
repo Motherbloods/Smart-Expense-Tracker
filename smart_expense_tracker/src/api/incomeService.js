@@ -21,7 +21,6 @@ const retryRequest = async (requestFn, maxRetries = 2, delayMs = 300) => {
       }
 
       if (i < maxRetries) {
-        console.log(`⏳ Retry ${i + 1}/${maxRetries} after ${delayMs}ms...`);
         await delay(delayMs);
       }
     }
@@ -37,7 +36,6 @@ export const getIncomes = () => {
   return cachedAPICall(
     `incomes_${telegramId}`,
     async () => {
-      console.log("📥 Fetching incomes from API");
 
       // Retry logic untuk handle race condition
       return await retryRequest(
@@ -58,7 +56,6 @@ export const createIncome = async (incomeData, telegramId = getTelegramId()) => 
     // Invalidate cache
     apiCache.invalidate(`incomes_${telegramId}`);
 
-    console.log("✅ Income created, cache invalidated");
     return response.data;
   } catch (error) {
     console.error("❌ Failed to create income:", error);
@@ -77,7 +74,6 @@ export const editIncome = async (incomeId, incomeData, telegramId = getTelegramI
     // Invalidate cache
     apiCache.invalidate(`incomes_${telegramId}`);
 
-    console.log("✅ Income updated, cache invalidated");
     return response;
   } catch (error) {
     console.error("❌ Failed to edit income:", error);
@@ -93,7 +89,6 @@ export const deleteIncome = async (incomeId, telegramId = getTelegramId()) => {
     // Invalidate cache hanya jika berhasil
     if (response.data.success) {
       apiCache.invalidate(`incomes_${telegramId}`);
-      console.log("✅ Income deleted, cache invalidated");
     }
 
     return response;

@@ -12,7 +12,6 @@ export const getExpenses = async () => {
     `expenses_${telegramId}`,
     async () => {
       const response = await axiosInstance.get("/expenses");
-      console.log("📥 Fetched expenses from API");
       return response;
     },
     2 * 60 * 1000 // Cache 2 menit
@@ -29,7 +28,6 @@ export const createExpense = async (data) => {
     apiCache.invalidate(`expenses_${telegramId}`);
     apiCache.invalidate(`incomes_${telegramId}`);
 
-    console.log("✅ Expense created, cache invalidated");
     return response;
   } catch (error) {
     console.error("❌ Error creating expense:", error);
@@ -47,7 +45,6 @@ export const editExpense = async (data, id) => {
     apiCache.invalidate(`expenses_${telegramId}`);
     apiCache.invalidate(`incomes_${telegramId}`);
 
-    console.log("✅ Expense updated, cache invalidated");
     return response;
   } catch (error) {
     console.error("❌ Error updating expense:", error);
@@ -65,7 +62,6 @@ export const deleteExpense = async (id) => {
     apiCache.invalidate(`expenses_${telegramId}`);
     apiCache.invalidate(`incomes_${telegramId}`);
 
-    console.log("✅ Expense deleted, cache invalidated");
     return response;
   } catch (error) {
     console.error("❌ Error deleting expense:", error);
