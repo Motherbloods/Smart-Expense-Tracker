@@ -29,8 +29,8 @@ const USER_RANK_COLORS = [
   "#f97316",
   "#64748b",
   "#b45309",
-  "#94a3b8",
-  "#94a3b8",
+  "#64748b",
+  "#64748b",
 ];
 
 function AdminLaporan() {
@@ -227,30 +227,31 @@ function AdminLaporan() {
 
     .adm-root * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; }
     .adm-mono { font-family: 'DM Mono', monospace; }
+        .adm-header { padding: 0 0 .25rem; }
 
     .adm-card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-radius: 16px;
+      border-radius: 12px;
       padding: 1.5rem;
-      box-shadow: 0 1px 3px 0 rgb(0 0 0/.05), 0 1px 2px -1px rgb(0 0 0/.05);
+      box-shadow: 0 1px 2px 0 rgb(15 23 42 / .05);
     }
 
     .adm-stat {
       background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-radius: 16px;
+      border-radius: 12px;
       padding: 1.25rem 1.5rem;
-      box-shadow: 0 1px 3px 0 rgb(0 0 0/.05);
+      box-shadow: 0 1px 2px 0 rgb(15 23 42 / .05);
       position: relative; overflow: hidden;
       transition: box-shadow .2s, transform .2s;
     }
-    .adm-stat:hover { box-shadow: 0 4px 16px -2px rgb(0 0 0/.08); transform: translateY(-1px); }
+    
 
     .adm-select {
       padding: .5rem .875rem;
       border: 1px solid #e2e8f0;
-      border-radius: 10px;
+      border-radius: 8px;
       background: #fff;
       color: #0f172a;
       font-size: .875rem; font-weight: 500;
@@ -268,13 +269,12 @@ function AdminLaporan() {
     .adm-btn {
       display: inline-flex; align-items: center; gap: .5rem;
       padding: .6rem 1.25rem;
-      border-radius: 10px;
+      border-radius: 8px;
       font-size: .875rem; font-weight: 600;
       border: none; cursor: pointer;
       font-family: 'Plus Jakarta Sans', sans-serif;
       transition: all .2s;
     }
-    .adm-btn:hover { transform: translateY(-1px); }
     .adm-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 
     .adm-btn-slate { background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; }
@@ -287,7 +287,7 @@ function AdminLaporan() {
     .adm-section-label {
       font-size:.7rem; font-weight:700;
       letter-spacing:.07em; text-transform:uppercase;
-      color:#94a3b8; margin-bottom:.5rem;
+      color:#64748b; margin-bottom:.5rem;
     }
 
     .adm-progress-track {
@@ -390,14 +390,7 @@ function AdminLaporan() {
           onCollapseChange={setIsSidebarCollapsed}
         />
 
-        <main
-          style={{
-            flex: 1,
-            minHeight: "100vh",
-            padding: "2rem",
-            overflowX: "hidden",
-          }}
-        >
+        <main className="app-main" style={{ overflowX: "hidden" }}>
           <div
             style={{
               maxWidth: 1200,
@@ -407,7 +400,7 @@ function AdminLaporan() {
               gap: "1.25rem",
             }}
           >
-            <div className="adm-card">
+            <div className="adm-header">
               <div
                 style={{
                   display: "flex",
@@ -432,7 +425,7 @@ function AdminLaporan() {
                         height: 36,
                         borderRadius: 10,
                         flexShrink: 0,
-                        background: "linear-gradient(135deg, #1d4ed8, #7c3aed)",
+                        background: "#0f766e",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -468,7 +461,7 @@ function AdminLaporan() {
                   <p
                     style={{
                       fontSize: ".875rem",
-                      color: "#94a3b8",
+                      color: "#64748b",
                       fontWeight: 500,
                     }}
                   >
@@ -576,7 +569,7 @@ function AdminLaporan() {
                   />
                   {monthNames[selectedMonth]} {selectedYear}
                 </div>
-                <span style={{ fontSize: ".75rem", color: "#94a3b8" }}>
+                <span style={{ fontSize: ".75rem", color: "#64748b" }}>
                   {incomes.length + expenses.length} total transaksi
                 </span>
               </div>
@@ -592,7 +585,7 @@ function AdminLaporan() {
               {[
                 {
                   label: "Total User",
-                  accent: "#1d4ed8",
+                  accent: "#475569",
                   value: totalUsers,
                   sub: "Pengguna terdaftar",
                   icon: <Users size={15} />,
@@ -624,7 +617,7 @@ function AdminLaporan() {
                 },
                 {
                   label: "Rata-rata / User",
-                  accent: "#7c3aed",
+                  accent: "#475569",
                   value: `Rp ${totalUsers > 0 ? Math.round(allIncomes / totalUsers).toLocaleString("id-ID") : "0"}`,
                   sub: "Pemasukan per user",
                   icon: <BarChart3 size={15} />,
@@ -642,11 +635,7 @@ function AdminLaporan() {
                   >
                     <span
                       style={{
-                        fontSize: ".7rem",
-                        fontWeight: 700,
-                        color: "#94a3b8",
-                        textTransform: "uppercase",
-                        letterSpacing: ".05em",
+                        fontSize: ".8125rem", fontWeight: 600, color: "#475569",
                       }}
                     >
                       {label}
@@ -670,10 +659,8 @@ function AdminLaporan() {
                   <div
                     className={mono ? "adm-mono" : ""}
                     style={{
-                      fontSize: mono ? "1.05rem" : "1.75rem",
-                      fontWeight: 700,
-                      color: accent,
-                      letterSpacing: "-.01em",
+                      fontSize: mono ? "1.25rem" : "1.75rem",
+                      fontWeight: 700, color: label === "Saldo Bersih" && netIncome < 0 ? "#dc2626" : "#0f172a", letterSpacing: "-.01em",
                       marginBottom: ".25rem",
                     }}
                   >
@@ -682,24 +669,13 @@ function AdminLaporan() {
                   <div
                     style={{
                       fontSize: ".72rem",
-                      color: "#94a3b8",
+                      color: "#64748b",
                       fontWeight: 500,
                     }}
                   >
                     {sub}
                   </div>
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      height: 3,
-                      background: accent,
-                      borderRadius: "0 0 16px 16px",
-                      opacity: 0.15,
-                    }}
-                  />
+                  
                 </div>
               ))}
             </div>
@@ -770,7 +746,7 @@ function AdminLaporan() {
                                 {category}
                               </span>
                               <span
-                                style={{ fontSize: ".7rem", color: "#94a3b8" }}
+                                style={{ fontSize: ".7rem", color: "#64748b" }}
                               >
                                 ({data.count}x)
                               </span>
@@ -796,7 +772,7 @@ function AdminLaporan() {
                             style={{ textAlign: "right", marginTop: ".2rem" }}
                           >
                             <span
-                              style={{ fontSize: ".68rem", color: "#94a3b8" }}
+                              style={{ fontSize: ".68rem", color: "#64748b" }}
                             >
                               {Math.round(pct)}%
                             </span>
@@ -877,7 +853,7 @@ function AdminLaporan() {
                               {user.name || user.username}
                             </div>
                             <div
-                              style={{ fontSize: ".7rem", color: "#94a3b8" }}
+                              style={{ fontSize: ".7rem", color: "#64748b" }}
                             >
                               Bersih: Rp{" "}
                               {user.netIncome.toLocaleString("id-ID")}
@@ -895,7 +871,7 @@ function AdminLaporan() {
                           >
                             Rp {user.totalIncome.toLocaleString("id-ID")}
                           </div>
-                          <div style={{ fontSize: ".7rem", color: "#94a3b8" }}>
+                          <div style={{ fontSize: ".7rem", color: "#64748b" }}>
                             pemasukan
                           </div>
                         </div>
@@ -997,7 +973,7 @@ function AdminLaporan() {
                               }}
                             >
                               <span
-                                style={{ fontSize: ".7rem", color: "#94a3b8" }}
+                                style={{ fontSize: ".7rem", color: "#64748b" }}
                               >
                                 {getUserName(income.telegramId)}
                               </span>
@@ -1117,7 +1093,7 @@ function AdminLaporan() {
                               }}
                             >
                               <span
-                                style={{ fontSize: ".7rem", color: "#94a3b8" }}
+                                style={{ fontSize: ".7rem", color: "#64748b" }}
                               >
                                 {getUserName(expense.telegramId)}
                               </span>
@@ -1180,7 +1156,7 @@ function AdminLaporan() {
               <p
                 style={{
                   fontSize: ".8rem",
-                  color: "#94a3b8",
+                  color: "#64748b",
                   marginBottom: "1rem",
                 }}
               >

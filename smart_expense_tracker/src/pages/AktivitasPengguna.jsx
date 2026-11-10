@@ -288,25 +288,26 @@ function AktivitasPengguna() {
 
         .ak-root * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; }
         .ak-mono { font-family: 'DM Mono', monospace; }
+        .ak-header { padding: 0 0 .25rem; }
 
         .ak-card {
           background: #fff;
           border: 1px solid #e2e8f0;
-          border-radius: 16px;
+          border-radius: 12px;
           padding: 1.5rem;
-          box-shadow: 0 1px 3px 0 rgb(0 0 0/.05), 0 1px 2px -1px rgb(0 0 0/.05);
+          box-shadow: 0 1px 2px 0 rgb(15 23 42 / .05);
         }
 
         .ak-section-label {
           font-size: .7rem; font-weight: 700;
-          letter-spacing: .07em; text-transform: uppercase; color: #94a3b8;
+          letter-spacing: .07em; text-transform: uppercase; color: #64748b;
         }
 
         .ak-input {
           width: 100%;
           padding: .6rem 1rem .6rem 2.75rem;
           border: 1px solid #e2e8f0;
-          border-radius: 10px;
+          border-radius: 8px;
           background: #fff;
           color: #0f172a;
           font-size: .875rem; font-weight: 500;
@@ -319,7 +320,7 @@ function AktivitasPengguna() {
 
         .ak-filter-btn {
           padding: .55rem 1.125rem;
-          border-radius: 9px;
+          border-radius: 8px;
           font-size: .82rem; font-weight: 700;
           border: 1px solid transparent;
           cursor: pointer;
@@ -335,13 +336,12 @@ function AktivitasPengguna() {
         .ak-btn {
           display: inline-flex; align-items: center; gap: .5rem;
           padding: .55rem 1.125rem;
-          border-radius: 10px;
+          border-radius: 8px;
           font-size: .875rem; font-weight: 600;
           border: none; cursor: pointer;
           font-family: 'Plus Jakarta Sans', sans-serif;
           transition: all .2s;
         }
-        .ak-btn:hover { transform: translateY(-1px); }
         .ak-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
         .ak-btn-slate { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
         .ak-btn-slate:hover { background: #e2e8f0; }
@@ -362,7 +362,7 @@ function AktivitasPengguna() {
           cursor: default;
         }
         .ak-activity-row:last-child { border-bottom: none; }
-        .ak-activity-row:hover { background: #fafafa; }
+        .ak-activity-row:hover { background: #f8fafc; }
 
         .ak-badge {
           display: inline-flex; align-items: center; gap: .3rem;
@@ -383,15 +383,15 @@ function AktivitasPengguna() {
 
         .ak-modal-overlay {
           position: fixed; inset: 0;
-          background: rgb(0 0 0 / .45);
-          backdrop-filter: blur(4px);
+          background: rgb(15 23 42 / .4);
+          
           display: flex; align-items: center; justify-content: center;
           padding: 1rem; z-index: 50;
         }
         .ak-modal {
           background: #fff;
-          border-radius: 20px;
-          box-shadow: 0 25px 50px -12px rgb(0 0 0 / .25);
+          border-radius: 14px;
+          box-shadow: 0 20px 40px -12px rgb(15 23 42 / .2);
           max-width: 520px; width: 100%;
           max-height: 90vh; overflow-y: auto;
         }
@@ -400,10 +400,10 @@ function AktivitasPengguna() {
           display: flex; flex-direction: column; gap: .25rem;
           padding: 1rem;
           background: #f8fafc;
-          border-radius: 12px;
+          border-radius: 8px;
           border: 1px solid #f1f5f9;
         }
-        .ak-detail-label { font-size: .72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; }
+        .ak-detail-label { font-size: .72rem; font-weight: 600; color: #64748b; }
         .ak-detail-value { font-size: .9rem; font-weight: 600; color: #0f172a; }
 
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -424,14 +424,7 @@ function AktivitasPengguna() {
           onCollapseChange={setIsSidebarCollapsed}
         />
 
-        <main
-          style={{
-            flex: 1,
-            minHeight: "100vh",
-            padding: "2rem",
-            overflowX: "hidden",
-          }}
-        >
+        <main className="app-main" style={{ overflowX: "hidden" }}>
           <div
             style={{
               maxWidth: 1100,
@@ -441,7 +434,7 @@ function AktivitasPengguna() {
               gap: "1.25rem",
             }}
           >
-            <div className="ak-card">
+            <div className="ak-header">
               <div
                 style={{
                   display: "flex",
@@ -466,7 +459,7 @@ function AktivitasPengguna() {
                         height: 36,
                         borderRadius: 10,
                         flexShrink: 0,
-                        background: "linear-gradient(135deg, #0f766e, #14b8a6)",
+                        background: "#0f766e",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -499,7 +492,7 @@ function AktivitasPengguna() {
                   <p
                     style={{
                       fontSize: ".875rem",
-                      color: "#94a3b8",
+                      color: "#64748b",
                       fontWeight: 500,
                     }}
                   >
@@ -568,7 +561,7 @@ function AktivitasPengguna() {
                           style={{
                             width: 13,
                             height: 13,
-                            border: "2px solid #94a3b8",
+                            border: "2px solid #64748b",
                             borderTopColor: "transparent",
                             borderRadius: "50%",
                           }}
@@ -615,7 +608,7 @@ function AktivitasPengguna() {
                     height="15"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="#94a3b8"
+                    stroke="#64748b"
                     strokeWidth="2.2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -679,7 +672,7 @@ function AktivitasPengguna() {
                   gap: ".5rem",
                 }}
               >
-                <span style={{ fontSize: ".75rem", color: "#94a3b8" }}>
+                <span style={{ fontSize: ".75rem", color: "#64748b" }}>
                   Menampilkan
                 </span>
                 <span
@@ -692,7 +685,7 @@ function AktivitasPengguna() {
                   {activities.length} aktivitas
                 </span>
                 {searchQuery && (
-                  <span style={{ fontSize: ".72rem", color: "#94a3b8" }}>
+                  <span style={{ fontSize: ".72rem", color: "#64748b" }}>
                     untuk &ldquo;{searchQuery}&rdquo;
                   </span>
                 )}
@@ -724,7 +717,7 @@ function AktivitasPengguna() {
                   <p
                     style={{
                       fontSize: ".85rem",
-                      color: "#94a3b8",
+                      color: "#64748b",
                       fontWeight: 500,
                     }}
                   >
@@ -772,7 +765,7 @@ function AktivitasPengguna() {
                     style={{
                       fontSize: ".95rem",
                       fontWeight: 700,
-                      color: "#94a3b8",
+                      color: "#64748b",
                       marginBottom: ".25rem",
                     }}
                   >
@@ -881,7 +874,7 @@ function AktivitasPengguna() {
                             <span
                               style={{
                                 fontSize: ".72rem",
-                                color: "#94a3b8",
+                                color: "#64748b",
                                 fontWeight: 500,
                               }}
                             >
@@ -912,7 +905,7 @@ function AktivitasPengguna() {
                             }}
                           >
                             <span
-                              style={{ fontSize: ".75rem", color: "#94a3b8" }}
+                              style={{ fontSize: ".75rem", color: "#64748b" }}
                             >
                               <svg
                                 width="11"
@@ -1164,7 +1157,7 @@ function AktivitasPengguna() {
                         display: "inline",
                         marginRight: ".3rem",
                         verticalAlign: "middle",
-                        color: "#94a3b8",
+                        color: "#64748b",
                       }}
                     >
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />

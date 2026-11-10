@@ -310,31 +310,32 @@ function Laporan() {
 
         .lap-root * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; }
         .lap-mono { font-family: 'DM Mono', monospace; }
+        .lap-header { padding: 0 0 .25rem; }
 
         .lap-card {
           background: #ffffff;
           border: 1px solid #e2e8f0;
-          border-radius: 16px;
+          border-radius: 12px;
           padding: 1.5rem;
-          box-shadow: 0 1px 3px 0 rgb(0 0 0 / .05), 0 1px 2px -1px rgb(0 0 0 / .05);
+          box-shadow: 0 1px 2px 0 rgb(15 23 42 / .05);
         }
 
         .lap-stat {
           background: #ffffff;
           border: 1px solid #e2e8f0;
-          border-radius: 16px;
+          border-radius: 12px;
           padding: 1.25rem 1.5rem;
-          box-shadow: 0 1px 3px 0 rgb(0 0 0 / .05);
+          box-shadow: 0 1px 2px 0 rgb(15 23 42 / .05);
           position: relative;
           overflow: hidden;
           transition: box-shadow .2s, transform .2s;
         }
-        .lap-stat:hover { box-shadow: 0 4px 16px -2px rgb(0 0 0 / .08); transform: translateY(-1px); }
+        
 
         .lap-select {
           padding: .5rem .875rem;
           border: 1px solid #e2e8f0;
-          border-radius: 10px;
+          border-radius: 8px;
           background: #fff;
           color: #0f172a;
           font-size: .875rem;
@@ -355,13 +356,12 @@ function Laporan() {
         .lap-btn {
           display: inline-flex; align-items: center; gap: .5rem;
           padding: .6rem 1.25rem;
-          border-radius: 10px;
+          border-radius: 8px;
           font-size: .875rem; font-weight: 600;
           border: none; cursor: pointer;
           transition: all .2s;
           font-family: 'Plus Jakarta Sans', sans-serif;
         }
-        .lap-btn:hover { transform: translateY(-1px); }
         .lap-btn:disabled { opacity: .65; cursor: not-allowed; transform: none; }
 
         .lap-btn-slate {
@@ -371,26 +371,23 @@ function Laporan() {
 
         .lap-btn-red {
           background: #ef4444; color: #fff;
-          box-shadow: 0 2px 8px rgb(239 68 68 / .25);
         }
-        .lap-btn-red:hover { background: #dc2626; box-shadow: 0 4px 12px rgb(239 68 68 / .3); }
+        .lap-btn-red:hover { background: #dc2626; }
 
         .lap-btn-teal {
           background: #0f766e; color: #fff;
-          box-shadow: 0 2px 8px rgb(15 118 110 / .25);
         }
-        .lap-btn-teal:hover { background: #0d6a62; box-shadow: 0 4px 12px rgb(15 118 110 / .3); }
+        .lap-btn-teal:hover { background: #0d6a62; }
 
         .lap-section-label {
           font-size: .7rem; font-weight: 700;
           letter-spacing: .07em; text-transform: uppercase;
-          color: #94a3b8; margin-bottom: .625rem;
+          color: #64748b; margin-bottom: .625rem;
         }
 
         .lap-progress-track {
           height: 8px; background: #f1f5f9;
           border-radius: 99px; overflow: hidden;
-          box-shadow: inset 0 1px 2px rgb(0 0 0 / .06);
         }
         .lap-progress-fill {
           height: 100%; border-radius: 99px;
@@ -400,7 +397,7 @@ function Laporan() {
         .lap-row-item {
           display: flex; align-items: center; justify-content: space-between;
           padding: .75rem 1rem;
-          border-radius: 12px;
+          border-radius: 8px;
           border: 1px solid transparent;
           transition: background .15s;
         }
@@ -439,7 +436,7 @@ function Laporan() {
           onCollapseChange={setIsSidebarCollapsed}
         />
 
-        <main style={{ flex: 1, minHeight: "100vh", padding: "2rem" }}>
+        <main className="app-main">
           <div
             style={{
               maxWidth: 1200,
@@ -449,7 +446,7 @@ function Laporan() {
               gap: "1.25rem",
             }}
           >
-            <div className="lap-card">
+            <div className="lap-header">
               <div
                 style={{
                   display: "flex",
@@ -482,7 +479,7 @@ function Laporan() {
                   <p
                     style={{
                       fontSize: ".875rem",
-                      color: "#94a3b8",
+                      color: "#64748b",
                       fontWeight: 500,
                       marginLeft: 1,
                     }}
@@ -593,7 +590,7 @@ function Laporan() {
                   />
                   {monthNames[selectedMonth]} {selectedYear}
                 </div>
-                <span style={{ fontSize: ".75rem", color: "#94a3b8" }}>
+                <span style={{ fontSize: ".75rem", color: "#64748b" }}>
                   {filteredExpenses.length + filteredIncomes.length} total
                   transaksi
                 </span>
@@ -631,7 +628,7 @@ function Laporan() {
                 },
                 {
                   label: "Penggunaan Budget",
-                  accent: "#7c3aed",
+                  accent: "#475569",
                   value: `${Math.round(budgetPercentage)}%`,
                   sub: `dari Rp ${monthlyBudget.toLocaleString("id-ID")}`,
                   icon: <FileText size={16} />,
@@ -648,11 +645,7 @@ function Laporan() {
                   >
                     <span
                       style={{
-                        fontSize: ".72rem",
-                        fontWeight: 700,
-                        color: "#94a3b8",
-                        textTransform: "uppercase",
-                        letterSpacing: ".05em",
+                        fontSize: ".8125rem", fontWeight: 600, color: "#475569",
                       }}
                     >
                       {label}
@@ -675,10 +668,8 @@ function Laporan() {
                   <div
                     className="lap-mono"
                     style={{
-                      fontSize: "1.15rem",
-                      fontWeight: 700,
-                      color: accent,
-                      letterSpacing: "-.01em",
+                      fontSize: "1.375rem",
+                      fontWeight: 700, color: label === "Saldo Bersih" && netIncome < 0 ? "#dc2626" : "#0f172a", letterSpacing: "-.01em",
                       marginBottom: ".25rem",
                     }}
                   >
@@ -687,24 +678,13 @@ function Laporan() {
                   <div
                     style={{
                       fontSize: ".72rem",
-                      color: "#94a3b8",
+                      color: "#64748b",
                       fontWeight: 500,
                     }}
                   >
                     {sub}
                   </div>
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      height: 3,
-                      background: accent,
-                      borderRadius: "0 0 16px 16px",
-                      opacity: 0.15,
-                    }}
-                  />
+                  
                 </div>
               ))}
             </div>
@@ -788,13 +768,13 @@ function Laporan() {
                 >
                   <span
                     className="lap-mono"
-                    style={{ fontSize: ".7rem", color: "#94a3b8" }}
+                    style={{ fontSize: ".7rem", color: "#64748b" }}
                   >
                     Rp 0
                   </span>
                   <span
                     className="lap-mono"
-                    style={{ fontSize: ".7rem", color: "#94a3b8" }}
+                    style={{ fontSize: ".7rem", color: "#64748b" }}
                   >
                     Rp {monthlyBudget.toLocaleString("id-ID")}
                   </span>
@@ -869,7 +849,7 @@ function Laporan() {
                                 {category}
                               </span>
                               <span
-                                style={{ fontSize: ".72rem", color: "#94a3b8" }}
+                                style={{ fontSize: ".72rem", color: "#64748b" }}
                               >
                                 ({data.count}x)
                               </span>
@@ -898,7 +878,7 @@ function Laporan() {
                             style={{ textAlign: "right", marginTop: ".25rem" }}
                           >
                             <span
-                              style={{ fontSize: ".68rem", color: "#94a3b8" }}
+                              style={{ fontSize: ".68rem", color: "#64748b" }}
                             >
                               {Math.round(pct)}%
                             </span>
@@ -986,7 +966,7 @@ function Laporan() {
                               {expense.name}
                             </div>
                             <div
-                              style={{ fontSize: ".72rem", color: "#94a3b8" }}
+                              style={{ fontSize: ".72rem", color: "#64748b" }}
                             >
                               {new Date(expense.date).toLocaleDateString(
                                 "id-ID",
@@ -1100,7 +1080,7 @@ function Laporan() {
                               }}
                             >
                               <span
-                                style={{ fontSize: ".7rem", color: "#94a3b8" }}
+                                style={{ fontSize: ".7rem", color: "#64748b" }}
                               >
                                 {new Date(income.date).toLocaleDateString(
                                   "id-ID",
@@ -1220,7 +1200,7 @@ function Laporan() {
                               }}
                             >
                               <span
-                                style={{ fontSize: ".7rem", color: "#94a3b8" }}
+                                style={{ fontSize: ".7rem", color: "#64748b" }}
                               >
                                 {new Date(expense.date).toLocaleDateString(
                                   "id-ID",
@@ -1285,7 +1265,7 @@ function Laporan() {
               <p
                 style={{
                   fontSize: ".8rem",
-                  color: "#94a3b8",
+                  color: "#64748b",
                   marginBottom: "1rem",
                 }}
               >
@@ -1319,7 +1299,7 @@ function EmptyPlaceholder({ icon, text }) {
         alignItems: "center",
         justifyContent: "center",
         padding: "2.5rem 1rem",
-        color: "#94a3b8",
+        color: "#64748b",
       }}
     >
       <div
