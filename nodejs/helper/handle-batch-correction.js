@@ -6,7 +6,7 @@ const {
   capitalizeWords,
 } = require("../utils/text-formatter");
 const { createExpenseService } = require("../services/expense.service");
-const pusher = require("../utils/pusher");
+const { publishToUser } = require("../utils/pusher");
 const appendFeedback = require("../utils/googleapi");
 const handleBatchCorrection = async (
   telegramId,
@@ -106,7 +106,7 @@ const handleBatchCorrection = async (
         );
 
         if (savedExpenses) {
-          pusher.trigger("expenses", "new-expense", {
+          publishToUser(telegramId, "new-expense", {
             telegramId,
             expense: {
               name: formattedDescription,
@@ -144,7 +144,7 @@ const handleBatchCorrection = async (
         console.error("Unexpected error in batch correction:", error);
         failedCorrections.push({
           input: correction,
-          reason: `Kesalahan sistem: ${error.message}`,
+          reason: "Kesalahan sistem",
         });
       }
     }

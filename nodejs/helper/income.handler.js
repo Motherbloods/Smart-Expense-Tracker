@@ -1,6 +1,6 @@
 const { createIncomeService } = require("../services/income.service");
 const { sendMessage } = require("../services/telegram.service");
-const pusher = require("../utils/pusher");
+const { publishToUser } = require("../utils/pusher");
 const { extractAmount, capitalizeWords } = require("../utils/text-formatter");
 
 const handleIncomeCommand = async (telegramId, inputText, res) => {
@@ -102,7 +102,7 @@ const handleIncomeCommand = async (telegramId, inputText, res) => {
 
     // Trigger pusher notification
     try {
-      pusher.trigger("income", "new-income", {
+      publishToUser(telegramId, "new-income", {
         telegramId,
         income: {
           name,

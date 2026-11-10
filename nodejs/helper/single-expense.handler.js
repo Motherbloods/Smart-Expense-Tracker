@@ -7,7 +7,7 @@ const {
   sendWaitingMessage,
   editMessage,
 } = require("../services/telegram.service");
-const pusher = require("../utils/pusher");
+const { publishToUser } = require("../utils/pusher");
 const sessionCache = require("../utils/session-cache");
 const {
   capitalizeWords,
@@ -68,7 +68,7 @@ const handleSingleExpense = async (telegramId, inputText, res) => {
           "telegram"
         );
 
-        pusher.trigger("expenses", "new-expense", {
+        publishToUser(telegramId, "new-expense", {
           telegramId,
           expense: {
             name: formattedDescription,

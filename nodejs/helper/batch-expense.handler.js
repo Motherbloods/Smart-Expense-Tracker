@@ -12,7 +12,7 @@ const {
   extractAmount,
   cleanDescription,
 } = require("../utils/text-formatter");
-const pusher = require("../utils/pusher");
+const { publishToUser } = require("../utils/pusher");
 const { performance } = require("perf_hooks");
 
 const handleBatchExpenses = async (telegramId, inputText, res) => {
@@ -137,7 +137,7 @@ const handleBatchExpenses = async (telegramId, inputText, res) => {
         for (const expenseData of recognizedExpenses) {
           await createExpenseService(expenseData, telegramId, "telegram");
 
-          pusher.trigger("expenses", "new-expense", {
+          publishToUser(telegramId, "new-expense", {
             telegramId,
             expense: expenseData,
           });

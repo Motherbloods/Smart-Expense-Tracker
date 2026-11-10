@@ -1,7 +1,7 @@
 const { createExpenseService } = require("../services/expense.service");
 const { sendMessage } = require("../services/telegram.service");
 // const appendFeedback = require("../utils/googleapi");
-const pusher = require("../utils/pusher");
+const { publishToUser } = require("../utils/pusher");
 const sessionCache = require("../utils/session-cache");
 const {
   extractAmount,
@@ -77,7 +77,7 @@ const handleSingleCorrection = async (
       return;
     }
     try {
-      pusher.trigger("expenses", "new-expense", {
+      publishToUser(telegramId, "new-expense", {
         telegramId,
         expense: {
           name: formattedDescription,
@@ -113,7 +113,7 @@ const handleSingleCorrection = async (
     console.error("Error saving corrected expense:", error);
     await sendMessage(
       telegramId,
-      `❌ Gagal menyimpan: "${userSession.activity}"\nAlasan: ${error.message}`
+      `❌ Gagal menyimpan: "${userSession.activity}". Silakan coba lagi nanti.`
     );
   }
 };
