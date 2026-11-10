@@ -4,10 +4,6 @@ import {
   PlusCircle,
   Edit3,
   X,
-  Wallet,
-  Calendar,
-  FileText,
-  Tag,
 } from "lucide-react";
 
 function IncomeForm({
@@ -134,32 +130,31 @@ function IncomeForm({
     setIncomeEdit(null);
   };
 
-  const inputBase =
-    "w-full px-4 py-2.5 text-sm text-gray-800 bg-gray-50 border rounded-xl transition-all duration-200 outline-none placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed";
-  const inputFocus = "border-emerald-400 bg-white ring-2 ring-emerald-100";
-  const inputIdle = "border-gray-200 hover:border-gray-300";
+  const inputBase = "field-input";
+  const inputFocus = "is-focused";
+  const inputIdle = "";
 
   const getInputClass = (fieldName) =>
     `${inputBase} ${focused === fieldName ? inputFocus : inputIdle}`;
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+    <div className="form-card">
+      <div className="form-card__head">
         <div className="flex items-center gap-3">
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center ${incomeEdit ? "bg-amber-100" : "bg-emerald-100"}`}
+            className={`form-icon form-icon--income${incomeEdit ? " form-icon--edit" : ""}`}
           >
             {incomeEdit ? (
-              <Edit3 size={16} className="text-amber-600" />
+              <Edit3 size={16} />
             ) : (
-              <PlusCircle size={16} className="text-emerald-600" />
+              <PlusCircle size={16} />
             )}
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">
+            <h2 className="form-title">
               {incomeEdit ? "Edit Pemasukan" : "Tambah Pemasukan"}
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="form-sub">
               {incomeEdit
                 ? "Perbarui data pemasukan yang ada"
                 : "Catat sumber pemasukan baru"}
@@ -177,17 +172,17 @@ function IncomeForm({
         )}
       </div>
 
-      <div className="p-6 space-y-5">
+      <div className="form-body">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
-              <FileText size={12} />
+            <label htmlFor="income-name" className="field-label">
               Nama Pemasukan
             </label>
             <input
               disabled={isLoading}
               type="text"
-              name="name"
+              
+              id="income-name"
               value={formData.name}
               onChange={handleChange}
               onFocus={() => setFocused("name")}
@@ -198,23 +193,23 @@ function IncomeForm({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
-              <Wallet size={12} />
+            <label htmlFor="income-amount" className="field-label">
               Jumlah Pemasukan
             </label>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-400 pointer-events-none">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500 pointer-events-none">
                 Rp
               </span>
               <input
                 type="text"
-                name="amount"
+                
+                id="income-amount"
                 value={displayAmount}
                 onChange={handleChange}
                 onFocus={() => setFocused("amount")}
                 onBlur={() => setFocused(null)}
                 placeholder="0"
-                className={`${getInputClass("amount")} pl-10`}
+                className={`${getInputClass("amount")} field-input--prefixed mono`}
                 disabled={isLoading}
               />
             </div>
@@ -223,13 +218,13 @@ function IncomeForm({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
-              <Tag size={12} />
+            <label htmlFor="income-source" className="field-label">
               Sumber Pemasukan
             </label>
             {!isCustomSource ? (
               <select
-                name="source"
+                
+                id="income-source"
                 value={formData.source}
                 onChange={(e) => {
                   if (e.target.value === "__other__") {
@@ -258,7 +253,8 @@ function IncomeForm({
               <div className="relative">
                 <input
                   type="text"
-                  name="source"
+                  
+                  id="income-source"
                   placeholder="Masukkan sumber baru"
                   value={formData.source}
                   onChange={handleChange}
@@ -277,7 +273,7 @@ function IncomeForm({
                     setIsCustomSource(false);
                     setFormData((p) => ({ ...p, source: "" }));
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-gray-600"
                 >
                   <X size={14} />
                 </button>
@@ -286,13 +282,13 @@ function IncomeForm({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
-              <Calendar size={12} />
+            <label htmlFor="income-date" className="field-label">
               Tanggal
             </label>
             <input
               type="date"
-              name="date"
+              
+              id="income-date"
               value={formData.date}
               onChange={handleChange}
               onFocus={() => setFocused("date")}
@@ -304,21 +300,22 @@ function IncomeForm({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          <label htmlFor="income-notes" className="field-label">
             Catatan{" "}
-            <span className="text-gray-400 font-normal normal-case">
+            <span className="text-slate-500 font-normal normal-case">
               (Opsional)
             </span>
           </label>
           <textarea
-            name="notes"
+            
+            id="income-notes"
             value={formData.notes}
             onChange={handleChange}
             onFocus={() => setFocused("notes")}
             onBlur={() => setFocused(null)}
             placeholder="Tambahkan catatan tambahan..."
             rows={3}
-            className={`${getInputClass("notes")} resize-none`}
+            className={getInputClass("notes")}
             disabled={isLoading}
           />
         </div>
@@ -327,14 +324,7 @@ function IncomeForm({
           <button
             onClick={handleClick}
             disabled={isLoading}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 
-                            ${
-                              isLoading
-                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                : incomeEdit
-                                  ? "bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-200 hover:shadow-md hover:shadow-amber-200"
-                                  : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm shadow-emerald-200 hover:shadow-md hover:shadow-emerald-200"
-                            }`}
+            className="dash-btn-primary"
           >
             {isLoading ? (
               <>
@@ -375,7 +365,7 @@ function IncomeForm({
             <button
               onClick={handleCancel}
               disabled={isLoading}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors duration-200"
+              className="dash-btn-secondary"
             >
               Batal
             </button>
