@@ -1,3 +1,4 @@
+import { createUserChannel, EXPENSE_EVENT } from "../utils/realtime";
 import { useState, useEffect, useCallback } from "react";
 import Sidebar from "../components/sidebar/Sidebar";
 import { toast } from "react-toastify";
@@ -25,7 +26,6 @@ function AktivitasPengguna() {
         if (forceRefresh) invalidateActivityCache();
         const filters = { type: filterType, search: searchQuery, limit: 100 };
         const response = await getActivities(filters);
-        console.log("🔥 Activities fetched:", response.data);
         if (response.data.success) {
           setActivities(response.data.data);
           setLastRefreshTime(Date.now());
@@ -61,12 +61,9 @@ function AktivitasPengguna() {
   }, [searchQuery]);
 
   useEffect(() => {
-    const pusher = new window.Pusher(import.meta.env.VITE_PUSHER_KEY, {
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER,
-    });
-    const channel = pusher.subscribe(import.meta.env.VITE_PUSHER_SUBSCRIBE);
+    const channel = createUserChannel(telegramId);
 
-    channel.bind(import.meta.env.VITE_PUSHER_BIND, (data) => {
+    channel.bind(EXPENSE_EVENT, (data) => {
       if (data && data.expense && data.telegramId === telegramId) {
         fetchActivities();
         toast.success(`💸 Pengeluaran baru: ${data.expense.name}`, {
@@ -75,7 +72,7 @@ function AktivitasPengguna() {
         });
       }
     });
-    channel.bind("income-added", (data) => {
+    channel.bind("new-income", (data) => {
       if (data && data.income && data.telegramId === telegramId) {
         fetchActivities();
         toast.success(`💰 Pemasukan baru: ${data.income.name}`, {
@@ -288,7 +285,6 @@ function AktivitasPengguna() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 
         .ak-root * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; }
         .ak-mono { font-family: 'DM Mono', monospace; }
@@ -794,7 +790,7 @@ function AktivitasPengguna() {
                 </div>
               ) : (
                 <div className="ak-fadein">
-                  {activities.map((activity, idx) => {
+                  {activities.map((activity) => {
                     const typeConfig = getTypeConfig(activity.type);
                     const actionMeta = getActionMeta(activity.action);
                     const amountColor =

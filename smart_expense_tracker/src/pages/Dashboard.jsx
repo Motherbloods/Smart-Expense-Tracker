@@ -1,3 +1,4 @@
+import { createUserChannel, EXPENSE_EVENT } from "../utils/realtime";
 import {
   useCallback,
   useEffect,
@@ -395,14 +396,11 @@ function Dashboard() {
   const onAddIncome = async (newIncome) => {
     try {
       setIsLoading(true);
-      console.log("📝 Adding new income:", newIncome);
       const response = await createIncome(newIncome, telegramId);
-      console.log("Response from createIncome:", response);
       const newIncomeData = response?.data?.data || response?.data;
       if (newIncomeData) {
         setIncomes((prev) => [newIncomeData, ...prev]);
         apiCache.invalidate(`incomes_${telegramId}`);
-        console.log("✅ Income added successfully to state");
       } else {
         throw new Error("No data returned from server");
       }
@@ -421,13 +419,7 @@ function Dashboard() {
     try {
       setIsLoading(true);
       const { id, ...incomeData } = updatedIncome;
-      console.log("📝 Updating income with correct params:", {
-        incomeId: id,
-        incomeData,
-        telegramId,
-      });
       const response = await editIncome(id, incomeData, telegramId);
-      console.log("Response from editIncome:", response);
       const updatedData = response?.data?.data || response?.data;
       if (updatedData) {
         setIncomes((prev) =>
@@ -438,7 +430,6 @@ function Dashboard() {
           position: "top-right",
           autoClose: 3000,
         });
-        console.log("✅ Income updated successfully in state");
       } else {
         throw new Error("No data returned from server");
       }
@@ -546,68 +537,55 @@ function Dashboard() {
   }, [lastRefreshTime, refreshAllData]);
 
   useEffect(() => {
-    if (!telegramId) return;
-    const timeoutId = requestIdleCallback(
-      async () => {
-        try {
-          const pusher = new window.Pusher(import.meta.env.VITE_PUSHER_KEY, {
-            cluster: import.meta.env.VITE_PUSHER_CLUSTER,
-          });
-          const channel = pusher.subscribe(
-            import.meta.env.VITE_PUSHER_SUBSCRIBE,
-          );
-          channel.bind(import.meta.env.VITE_PUSHER_BIND, (data) => {
-            if (data && data.expense && data.telegramId === telegramId) {
-              const newExpense = {
-                _id: data.expense._id || `temp-${Date.now()}`,
-                name: data.expense.name,
-                amount: data.expense.amount,
-                category: data.expense.category,
-                date: data.expense.date,
-                telegramId: data.telegramId,
-              };
-              setExpenses((prev) => {
-                const exists = prev.some((exp) => exp._id === newExpense._id);
-                if (!exists) {
-                  apiCache.invalidate(`expenses_${telegramId}`);
-                  return [newExpense, ...prev];
-                }
-                return prev;
-              });
-            }
-          });
-          channel.bind("income-added", (data) => {
-            if (data && data.income && data.telegramId === telegramId) {
-              const newIncome = {
-                _id: data.income._id || `temp-${Date.now()}`,
-                name: data.income.name,
-                amount: data.income.amount,
-                source: data.income.source,
-                notes: data.income.notes,
-                date: data.income.date,
-                telegramId: data.telegramId,
-              };
-              setIncomes((prev) => {
-                const exists = prev.some((inc) => inc._id === newIncome._id);
-                if (!exists) {
-                  apiCache.invalidate(`incomes_${telegramId}`);
-                  return [newIncome, ...prev];
-                }
-                return prev;
-              });
-            }
-          });
-          return () => {
-            channel.unbind_all();
-            channel.unsubscribe();
-          };
-        } catch (error) {
-          console.error("Error initializing Pusher:", error);
-        }
-      },
-      { timeout: 5000 },
-    );
-    return () => cancelIdleCallback(timeoutId);
+    if (!telegramId) return undefined;
+    const channel = createUserChannel(telegramId);
+    channel.bind(EXPENSE_EVENT, (data) => {
+      if (data && data.expense && data.telegramId === telegramId) {
+        const newExpense = {
+          _id: data.expense._id || `temp-${Date.now()}`,
+          name: data.expense.name,
+          amount: data.expense.amount,
+          category: data.expense.category,
+          date: data.expense.date,
+          telegramId: data.telegramId,
+        };
+        setExpenses((prev) => {
+          const exists = prev.some((exp) => exp._id === newExpense._id);
+          if (!exists) {
+            apiCache.invalidate(`expenses_${telegramId}`);
+            return [newExpense, ...prev];
+          }
+          return prev;
+        });
+      }
+    });
+    const onIncome = (data) => {
+      if (data && data.income && data.telegramId === telegramId) {
+        const newIncome = {
+          _id: data.income._id || `temp-${Date.now()}`,
+          name: data.income.name,
+          amount: data.income.amount,
+          source: data.income.source,
+          notes: data.income.notes,
+          date: data.income.date,
+          telegramId: data.telegramId,
+        };
+        setIncomes((prev) => {
+          const exists = prev.some((inc) => inc._id === newIncome._id);
+          if (!exists) {
+            apiCache.invalidate(`incomes_${telegramId}`);
+            return [newIncome, ...prev];
+          }
+          return prev;
+        });
+      }
+    };
+    channel.bind("income-added", onIncome);
+    channel.bind("new-income", onIncome);
+    return () => {
+      channel.unbind_all();
+      channel.unsubscribe();
+    };
   }, [telegramId]);
 
   useEffect(() => {
@@ -617,7 +595,6 @@ function Dashboard() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 
         :root {
           --brand: #0f766e;

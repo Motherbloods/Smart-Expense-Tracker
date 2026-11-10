@@ -20,6 +20,7 @@ import {
   invalidateAdminCache,
 } from "../api/adminService";
 import toast from "react-hot-toast";
+import { toCsvField } from "../utils/csv";
 import openPrintWindow from "../utils/printUtils";
 
 const CAT_COLORS = ["#0f766e", "#2563eb", "#7c3aed", "#db2777", "#ea580c"];
@@ -196,13 +197,13 @@ function AdminLaporan() {
       csvContent += "No,Kategori,Total,Jumlah Transaksi,Persentase\n";
       topCategories.forEach(([category, data], index) => {
         const percentage = Math.round((data.total / allExpenses) * 100);
-        csvContent += `${index + 1},${category},${data.total},${data.count},${percentage}%\n`;
+        csvContent += `${index + 1},${toCsvField(category)},${data.total},${data.count},${percentage}%\n`;
       });
       csvContent += "\n";
       csvContent += "TOP 5 PENGGUNA\n";
       csvContent += "No,Nama,Pemasukan,Pengeluaran,Bersih\n";
       topUsers.forEach((user, index) => {
-        csvContent += `${index + 1},${user.name || user.username},${user.totalIncome},${user.totalExpense},${user.netIncome}\n`;
+        csvContent += `${index + 1},${toCsvField(user.name || user.username)},${user.totalIncome},${user.totalExpense},${user.netIncome}\n`;
       });
 
       const encodedUri = encodeURI(csvContent);
@@ -223,7 +224,6 @@ function AdminLaporan() {
   };
 
   const styles = `
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 
     .adm-root * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; }
     .adm-mono { font-family: 'DM Mono', monospace; }

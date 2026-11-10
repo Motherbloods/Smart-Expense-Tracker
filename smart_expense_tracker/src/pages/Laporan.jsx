@@ -18,6 +18,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { toSafeCsvCell } from "../utils/csv";
 import openUserPrintWindow from "../utils/userPrintUtils";
 import useNavigation from "../hooks/useNavigation";
 
@@ -40,7 +41,6 @@ function Laporan() {
   const [expenses, setExpenses] = useState([]);
   const [incomes, setIncomes] = useState([]);
   const [monthlyBudget, setMonthlyBudget] = useState(0);
-  const [isLoading] = useState(false);
   const [_, setIsSidebarCollapsed] = useState(false);
   const [isDataReady, setIsDataReady] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -249,7 +249,7 @@ function Laporan() {
         .map((row) =>
           row
             .map((cell) => {
-              const cellStr = String(cell);
+              const cellStr = toSafeCsvCell(cell);
               if (
                 cellStr.includes(",") ||
                 cellStr.includes('"') ||
@@ -307,7 +307,6 @@ function Laporan() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 
         .lap-root * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; }
         .lap-mono { font-family: 'DM Mono', monospace; }

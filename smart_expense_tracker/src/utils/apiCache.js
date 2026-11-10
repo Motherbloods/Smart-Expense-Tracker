@@ -21,28 +21,23 @@ class APICache {
     const now = Date.now();
 
     if (now > expiry) {
-      console.log(`⏰ Cache expired: ${key}`);
       this.cache.delete(key);
       this.timestamps.delete(key);
       return null;
     }
 
-    const remaining = Math.round((expiry - now) / 1000);
-    // console.log(`✅ Cache hit: ${key} (remaining: ${remaining}s)`);
     return this.cache.get(key);
   }
 
   invalidate(key) {
     this.cache.delete(key);
     this.timestamps.delete(key);
-    console.log(`🗑️ Cache invalidated: ${key}`);
   }
 
   clear() {
     this.cache.clear();
     this.timestamps.clear();
     this.pending.clear();
-    console.log(`🗑️ All cache cleared`);
   }
 
   getKeys() {
@@ -62,7 +57,6 @@ export async function cachedAPICall(key, apiFunction, ttl) {
 
   // 2. Check pending promise
   if (apiCache.pending.has(key)) {
-    console.log(`⏳ Awaiting pending API: ${key}`);
     return apiCache.pending.get(key);
   }
 

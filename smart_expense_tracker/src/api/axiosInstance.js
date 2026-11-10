@@ -57,18 +57,16 @@ axiosInstance.interceptors.response.use(
       if (errorCode === "TOKEN_EXPIRED") {
         // Cegah retry loop
         if (originalRequest._retry) {
-          console.log("❌ Retry limit reached, redirecting to login");
           safeRedirectToLogin();
           return Promise.reject(error);
         }
 
         originalRequest._retry = true;
-        console.log("ini refresh flag", isRefreshing);
         // ✅ Jika sedang refresh, queue request ini
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
             failedQueue.push({
-              resolve: (token) => {
+              resolve: () => {
                 resolve(axiosInstance(originalRequest));
               },
               reject: (err) => {
@@ -82,7 +80,6 @@ axiosInstance.interceptors.response.use(
         isRefreshing = true;
 
         try {
-          console.log("🔄 Attempting token refresh...");
 
           await axios.post(
             `${API_URL}/refresh`,
@@ -93,7 +90,6 @@ axiosInstance.interceptors.response.use(
             }
           );
 
-          console.log("✅ Token refreshed successfully");
 
           // ✅ Process semua queued requests
           processQueue(null, true);
@@ -116,7 +112,6 @@ axiosInstance.interceptors.response.use(
       }
 
       // ✅ 401 lainnya (NO_TOKEN, INVALID_TOKEN) = langsung redirect
-      console.log("🔒 Unauthorized access:", errorCode || "No code");
       safeRedirectToLogin();
     }
 
