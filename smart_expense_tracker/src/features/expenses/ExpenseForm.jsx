@@ -4,9 +4,6 @@ import {
   PlusCircle,
   Edit3,
   X,
-  Wallet,
-  Calendar,
-  Tag,
   AlertCircle,
   Info,
 } from "lucide-react";
@@ -325,17 +322,15 @@ function ExpenseForm({
 
   const hasNoAvailableIncomes = availableIncomes.length === 0 && !expenseEdit;
 
-  const inputBase =
-    "w-full px-4 py-2.5 text-sm text-gray-800 bg-gray-50 border rounded-xl transition-all duration-200 outline-none placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed";
-  const inputFocus = "border-blue-400 bg-white ring-2 ring-blue-100";
-  const inputIdle = "border-gray-200 hover:border-gray-300";
-  const inputDisabled =
-    "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed";
+  const inputBase = "field-input";
+  const inputFocus = "is-focused";
+  const inputIdle = "";
+  const inputDisabled = "is-disabled";
 
   const getInputClass = (fieldName, hasError = false) => {
     if (hasNoAvailableIncomes) return `${inputBase} ${inputDisabled}`;
     if (hasError)
-      return `${inputBase} border-red-300 bg-white ring-2 ring-red-100`;
+      return `${inputBase} is-error`;
     return `${inputBase} ${focused === fieldName ? inputFocus : inputIdle}`;
   };
 
@@ -357,23 +352,23 @@ function ExpenseForm({
   const availableAmount = getAvailableAmount();
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+    <div className="form-card">
+      <div className="form-card__head">
         <div className="flex items-center gap-3">
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center ${expenseEdit ? "bg-amber-100" : "bg-blue-100"}`}
+            className={`form-icon form-icon--expense${expenseEdit ? " form-icon--edit" : ""}`}
           >
             {expenseEdit ? (
-              <Edit3 size={16} className="text-amber-600" />
+              <Edit3 size={16} />
             ) : (
-              <PlusCircle size={16} className="text-blue-600" />
+              <PlusCircle size={16} />
             )}
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">
+            <h2 className="form-title">
               {expenseEdit ? "Edit Pengeluaran" : "Tambah Pengeluaran"}
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="form-sub">
               {expenseEdit
                 ? "Perbarui data pengeluaran"
                 : "Catat pengeluaran baru"}
@@ -390,9 +385,9 @@ function ExpenseForm({
         )}
       </div>
 
-      <div className="p-6 space-y-5">
+      <div className="form-body">
         {hasNoAvailableIncomes && (
-          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
             <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
             <div>
               <p className="text-sm font-semibold text-amber-800">
@@ -408,14 +403,14 @@ function ExpenseForm({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
-              <Tag size={12} />
+            <label htmlFor="expense-name" className="field-label">
               Nama Pengeluaran
             </label>
             <input
               disabled={isLoading || hasNoAvailableIncomes}
               type="text"
-              name="name"
+              
+              id="expense-name"
               value={formData.name}
               onChange={handleChange}
               onFocus={() => setFocused("name")}
@@ -426,13 +421,13 @@ function ExpenseForm({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
-              <Wallet size={12} />
+            <label htmlFor="expense-sourceIncomeId" className="field-label">
               Sumber Pendapatan
               <span className="text-red-400">*</span>
             </label>
             <select
-              name="sourceIncomeId"
+              
+              id="expense-sourceIncomeId"
               value={formData.sourceIncomeId}
               onChange={handleChange}
               onFocus={() => setFocused("sourceIncomeId")}
@@ -455,7 +450,7 @@ function ExpenseForm({
               ))}
             </select>
             {expenseEdit && !formData.sourceIncomeId && (
-              <p className="text-xs text-gray-400 flex items-center gap-1">
+              <p className="text-xs text-slate-500 flex items-center gap-1">
                 <Info size={11} /> Menggunakan sumber pendapatan sebelumnya
               </p>
             )}
@@ -464,12 +459,13 @@ function ExpenseForm({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            <label htmlFor="expense-category" className="field-label">
               Kategori
             </label>
             {!isCustomCategory ? (
               <select
-                name="category"
+                
+                id="expense-category"
                 value={formData.category}
                 onChange={(e) => {
                   if (e.target.value === "__other__") {
@@ -498,7 +494,8 @@ function ExpenseForm({
               <div className="relative">
                 <input
                   type="text"
-                  name="category"
+                  
+                  id="expense-category"
                   placeholder="Kategori baru"
                   value={formData.category}
                   onChange={handleChange}
@@ -517,7 +514,7 @@ function ExpenseForm({
                     setIsCustomCategory(false);
                     setFormData((p) => ({ ...p, category: "" }));
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-gray-600"
                 >
                   <X size={14} />
                 </button>
@@ -526,11 +523,11 @@ function ExpenseForm({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center justify-between">
+            <label htmlFor="expense-amount" className="field-label field-label--split">
               <span>Jumlah</span>
               {availableAmount !== null && (
                 <span
-                  className={`text-xs font-normal normal-case ${validationMsg ? "text-red-500" : "text-gray-400"}`}
+                  className={`text-xs font-normal normal-case ${validationMsg ? "text-red-500" : "text-slate-500"}`}
                 >
                   Saldo: Rp{" "}
                   {new Intl.NumberFormat("id-ID").format(availableAmount)}
@@ -538,12 +535,13 @@ function ExpenseForm({
               )}
             </label>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-400 pointer-events-none">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500 pointer-events-none">
                 Rp
               </span>
               <input
                 type="text"
-                name="amount"
+                
+                id="expense-amount"
                 value={displayAmount}
                 onChange={handleChange}
                 onFocus={() => setFocused("amount")}
@@ -551,7 +549,7 @@ function ExpenseForm({
                 placeholder={
                   !selectedIncome && !expenseEdit ? "Pilih sumber dulu" : "0"
                 }
-                className={`${getInputClass("amount", !!validationMsg)} pl-10`}
+                className={`${getInputClass("amount", !!validationMsg)} field-input--prefixed mono`}
                 disabled={
                   isLoading ||
                   hasNoAvailableIncomes ||
@@ -572,13 +570,13 @@ function ExpenseForm({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
-              <Calendar size={12} />
+            <label htmlFor="expense-date" className="field-label">
               Tanggal
             </label>
             <input
               type="date"
-              name="date"
+              
+              id="expense-date"
               value={formData.date}
               onChange={handleChange}
               onFocus={() => setFocused("date")}
@@ -593,14 +591,7 @@ function ExpenseForm({
           <button
             onClick={handleClick}
             disabled={isLoading || !isFormValid()}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200
-                            ${
-                              isLoading || !isFormValid()
-                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                : expenseEdit
-                                  ? "bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-200 hover:shadow-md"
-                                  : "bg-blue-500 hover:bg-blue-600 text-white shadow-sm shadow-blue-200 hover:shadow-md"
-                            }`}
+            className="dash-btn-primary"
           >
             {isLoading ? (
               <>
@@ -639,7 +630,7 @@ function ExpenseForm({
             <button
               onClick={handleCancel}
               disabled={isLoading}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+              className="dash-btn-secondary"
             >
               Batal
             </button>
