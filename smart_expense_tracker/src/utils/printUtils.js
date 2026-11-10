@@ -1,4 +1,7 @@
-export const openPrintWindow = (reportData) => {
+import { escapeDeep, stylesheetLinks } from "./escapeHtml";
+
+export const openPrintWindow = (rawReportData) => {
+  const reportData = escapeDeep(rawReportData);
   const {
     selectedMonth,
     selectedYear,
@@ -81,7 +84,7 @@ export const openPrintWindow = (reportData) => {
             <title>Laporan Keuangan - ${
               monthNames[selectedMonth]
             } ${selectedYear}</title>
-            <script src="https://cdn.tailwindcss.com"></script>
+            ${stylesheetLinks()}
             <style>
                 @media print {
                     .no-print {
@@ -109,13 +112,13 @@ export const openPrintWindow = (reportData) => {
             <!-- Print Button -->
             <div class="no-print mb-6 flex justify-end gap-4">
                 <button
-                    onclick="window.close()"
+                    id="print-close-btn"
                     class="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold transition-all"
                 >
                     Tutup
                 </button>
                 <button
-                    onclick="window.print()"
+                    id="print-report-btn"
                     class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all"
                 >
                     Print / Save as PDF
@@ -235,6 +238,14 @@ export const openPrintWindow = (reportData) => {
   // Tulis HTML ke window baru
   printWindow.document.write(htmlContent);
   printWindow.document.close();
+  const printButton = printWindow.document.getElementById("print-report-btn");
+  if (printButton) {
+    printButton.addEventListener("click", () => printWindow.print());
+  }
+  const closeButton = printWindow.document.getElementById("print-close-btn");
+  if (closeButton) {
+    closeButton.addEventListener("click", () => printWindow.close());
+  }
 };
 
 export default openPrintWindow;
