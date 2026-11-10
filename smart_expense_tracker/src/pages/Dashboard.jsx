@@ -151,22 +151,22 @@ function Dashboard() {
 
   const warningConfig = {
     exceeded: {
-      bar: "from-red-500 to-rose-500",
+      bar: "bg-red-500",
       badge: "bg-red-50 text-red-600 border border-red-200",
       sisa: "bg-red-50 text-red-500",
     },
     critical: {
-      bar: "from-orange-400 to-orange-500",
+      bar: "bg-orange-500",
       badge: "bg-orange-50 text-orange-600 border border-orange-200",
       sisa: "bg-orange-50 text-orange-500",
     },
     warning: {
-      bar: "from-amber-400 to-yellow-400",
+      bar: "bg-amber-400",
       badge: "bg-amber-50 text-amber-600 border border-amber-200",
       sisa: "bg-amber-50 text-amber-500",
     },
     safe: {
-      bar: "from-teal-400 to-emerald-500",
+      bar: "bg-teal-600",
       badge: "bg-teal-50 text-teal-600 border border-teal-200",
       sisa: "bg-teal-50 text-teal-600",
     },
@@ -174,9 +174,10 @@ function Dashboard() {
 
   const stats = [
     {
-      label: "Budget Bulanan",
-      value: `Rp ${monthlyBudget.toLocaleString("id-ID")}`,
-      accent: "#2563eb",
+      label: "Saldo Bersih",
+      value: `Rp ${netIncome.toLocaleString("id-ID")}`,
+      accent: netIncome >= 0 ? "#0f766e" : "#dc2626",
+      negative: netIncome < 0,
       icon: (
         <svg
           width="16"
@@ -188,15 +189,14 @@ function Dashboard() {
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <rect x="2" y="5" width="20" height="14" rx="2" />
-          <path d="M2 10h20" />
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
         </svg>
       ),
     },
     {
       label: "Total Pemasukan",
       value: `Rp ${totalIncomes.toLocaleString("id-ID")}`,
-      accent: "#0f766e",
+      accent: "#047857",
       icon: (
         <svg
           width="16"
@@ -232,9 +232,9 @@ function Dashboard() {
       ),
     },
     {
-      label: "Saldo Bersih",
-      value: `Rp ${netIncome.toLocaleString("id-ID")}`,
-      accent: netIncome >= 0 ? "#0f766e" : "#dc2626",
+      label: "Budget Bulanan",
+      value: `Rp ${monthlyBudget.toLocaleString("id-ID")}`,
+      accent: "#475569",
       icon: (
         <svg
           width="16"
@@ -246,7 +246,8 @@ function Dashboard() {
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          <rect x="2" y="5" width="20" height="14" rx="2" />
+          <path d="M2 10h20" />
         </svg>
       ),
     },
@@ -594,165 +595,6 @@ function Dashboard() {
 
   return (
     <>
-      <style>{`
-
-        :root {
-          --brand: #0f766e;
-          --brand-light: #14b8a6;
-          --brand-muted: #ccfbf1;
-          --surface: #ffffff;
-          --surface-2: #f8fafc;
-          --border: #e2e8f0;
-          --text-1: #0f172a;
-          --text-2: #475569;
-          --text-3: #94a3b8;
-          --radius: 16px;
-          --radius-sm: 10px;
-          --shadow: 0 1px 3px 0 rgb(0 0 0 / .06), 0 1px 2px -1px rgb(0 0 0 / .06);
-          --shadow-md: 0 4px 16px -2px rgb(0 0 0 / .08), 0 2px 6px -2px rgb(0 0 0 / .05);
-        }
-
-        * { font-family: 'Plus Jakarta Sans', sans-serif; }
-
-        .dash-card {
-          background: var(--surface);
-          border: 1px solid var(--border);
-          border-radius: var(--radius);
-          padding: 1.5rem;
-          box-shadow: var(--shadow);
-        }
-
-        .dash-stat-card {
-          background: var(--surface);
-          border: 1px solid var(--border);
-          border-radius: var(--radius);
-          padding: 1.25rem 1.5rem;
-          box-shadow: var(--shadow);
-          position: relative;
-          overflow: hidden;
-          transition: box-shadow .2s, transform .2s;
-        }
-        .dash-stat-card:hover {
-          box-shadow: var(--shadow-md);
-          transform: translateY(-1px);
-        }
-
-        .dash-btn-primary {
-          display: inline-flex; align-items: center; gap: .5rem;
-          padding: .6rem 1.25rem;
-          background: var(--brand);
-          color: #fff;
-          border-radius: var(--radius-sm);
-          font-size: .875rem; font-weight: 600;
-          transition: background .2s, box-shadow .2s, transform .15s;
-          border: none; cursor: pointer;
-        }
-        .dash-btn-primary:hover { background: #0d6a62; box-shadow: 0 4px 12px rgb(15 118 110 / .3); transform: translateY(-1px); }
-        .dash-btn-primary:disabled { opacity: .65; cursor: not-allowed; transform: none; }
-
-        .dash-btn-secondary {
-          display: inline-flex; align-items: center; gap: .5rem;
-          padding: .6rem 1.25rem;
-          background: var(--surface-2);
-          color: var(--text-2);
-          border-radius: var(--radius-sm);
-          font-size: .875rem; font-weight: 600;
-          border: 1px solid var(--border); cursor: pointer;
-          transition: background .2s, border-color .2s, transform .15s;
-        }
-        .dash-btn-secondary:hover { background: #f1f5f9; border-color: #cbd5e1; transform: translateY(-1px); }
-
-        .dash-btn-ghost {
-          display: inline-flex; align-items: center; justify-content: center;
-          padding: .5rem;
-          background: transparent;
-          border: 1px solid var(--border);
-          border-radius: var(--radius-sm);
-          color: var(--text-2);
-          cursor: pointer; transition: all .15s;
-        }
-        .dash-btn-ghost:hover { background: var(--surface-2); color: var(--text-1); }
-
-        .dash-select {
-          padding: .5rem .875rem;
-          border: 1px solid var(--border);
-          border-radius: var(--radius-sm);
-          background: var(--surface);
-          color: var(--text-1);
-          font-size: .875rem; font-weight: 500;
-          outline: none; cursor: pointer;
-          transition: border-color .2s, box-shadow .2s;
-          appearance: none;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: right .75rem center;
-          padding-right: 2rem;
-        }
-        .dash-select:focus { border-color: var(--brand-light); box-shadow: 0 0 0 3px rgb(20 184 166 / .15); }
-
-        .toggle-pill {
-          display: flex;
-          background: var(--surface-2);
-          border: 1px solid var(--border);
-          border-radius: 12px;
-          padding: 4px;
-          gap: 4px;
-        }
-        .toggle-pill button {
-          flex: 1;
-          padding: .6rem 1.5rem;
-          border-radius: 9px;
-          font-weight: 700;
-          font-size: .9rem;
-          border: none; cursor: pointer;
-          transition: all .25s cubic-bezier(.4,0,.2,1);
-          display: flex; align-items: center; justify-content: center; gap: .4rem;
-        }
-        .toggle-pill .active-expense {
-          background: #0f766e;
-          color: #fff;
-          box-shadow: 0 2px 8px rgb(15 118 110 / .35);
-        }
-        .toggle-pill .active-income {
-          background: #1d4ed8;
-          color: #fff;
-          box-shadow: 0 2px 8px rgb(29 78 216 / .3);
-        }
-        .toggle-pill .inactive {
-          background: transparent;
-          color: var(--text-2);
-        }
-        .toggle-pill .inactive:hover { background: var(--surface); color: var(--text-1); }
-
-        .progress-track {
-          height: 10px;
-          background: #f1f5f9;
-          border-radius: 99px;
-          overflow: hidden;
-          box-shadow: inset 0 1px 3px rgb(0 0 0 / .07);
-        }
-        .progress-fill {
-          height: 100%;
-          border-radius: 99px;
-          transition: width 1.1s cubic-bezier(.4,0,.2,1);
-        }
-
-        .section-label {
-          font-size: .7rem;
-          font-weight: 700;
-          letter-spacing: .07em;
-          text-transform: uppercase;
-          color: var(--text-3);
-          margin-bottom: .75rem;
-        }
-
-        .mono { font-family: 'DM Mono', monospace; }
-
-        @keyframes shimmer {
-          100% { transform: translateX(200%); }
-        }
-      `}</style>
-
       <div
         className="flex"
         style={{ background: "#f8fafc", minHeight: "100vh" }}
@@ -763,217 +605,122 @@ function Dashboard() {
           onCollapseChange={setIsSidebarCollapsed}
         />
 
-        <main style={{ flex: 1, minHeight: "100vh", padding: "2rem" }}>
-          <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-            <div className="dash-card" style={{ marginBottom: "1.5rem" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "1rem",
+        <main className="app-main">
+          <div className="app-content">
+            <div className="page-header">
+              <div>
+                <h1 className="page-title">Dashboard Keuangan</h1>
+                <p className="page-subtitle">
+                  Ringkasan pemasukan dan pengeluaran {monthNames[selectedMonth]}{" "}
+                  {selectedYear}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setOriginalMonthlyBudget(monthlyBudget);
+                  setShowBudgetModal(true);
                 }}
+                className="dash-btn-primary"
               >
-                <div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: ".6rem",
-                      marginBottom: ".25rem",
-                    }}
-                  >
-                    <h1
-                      style={{
-                        fontSize: "1.5rem",
-                        fontWeight: 800,
-                        color: "var(--text-1)",
-                        letterSpacing: "-.02em",
-                      }}
-                    >
-                      Dashboard Keuangan
-                    </h1>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: ".875rem",
-                      color: "var(--text-3)",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Kelola pengeluaran dan pemasukan Anda dengan mudah
-                  </p>
-                </div>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4l3 3" />
+                </svg>
+                Set Budget
+              </button>
+            </div>
 
+            <div className="page-toolbar">
+              <div className="period-switch">
                 <button
-                  onClick={() => {
-                    setOriginalMonthlyBudget(monthlyBudget);
-                    setShowBudgetModal(true);
-                  }}
-                  className="dash-btn-primary"
+                  aria-label="goToPreviousMonth"
+                  onClick={goToPreviousMonth}
+                  className="dash-btn-ghost"
                 >
                   <svg
-                    width="14"
-                    height="14"
+                    width="16"
+                    height="16"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2.2"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M12 8v4l3 3" />
+                    <path d="M15 18l-6-6 6-6" />
                   </svg>
-                  Set Budget
+                </button>
+                <div className="period-label">
+                  {monthNames[selectedMonth]} {selectedYear}
+                </div>
+                <button
+                  aria-label="goToNextMonth"
+                  onClick={goToNextMonth}
+                  className="dash-btn-ghost"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="period-filters">
+                <select
+                  aria-label="Pilih Bulan"
+                  value={selectedMonth}
+                  onChange={handleMonthChange}
+                  className="dash-select"
+                >
+                  {monthNames.map((m, i) => (
+                    <option key={i} value={i}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Pilih Tahun"
+                  value={selectedYear}
+                  onChange={handleYearChange}
+                  className="dash-select"
+                >
+                  {yearOptions.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+                <button onClick={goToCurrentMonth} className="dash-btn-secondary">
+                  Bulan Ini
                 </button>
               </div>
             </div>
 
-            <div className="dash-card" style={{ marginBottom: "1.5rem" }}>
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "1rem",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: ".75rem",
-                  }}
-                >
-                  <button
-                    aria-label="goToPreviousMonth"
-                    onClick={goToPreviousMonth}
-                    className="dash-btn-ghost"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M15 18l-6-6 6-6" />
-                    </svg>
-                  </button>
-
-                  <div style={{ textAlign: "center", minWidth: 160 }}>
-                    <div
-                      style={{
-                        fontSize: "1.25rem",
-                        fontWeight: 800,
-                        color: "var(--text-1)",
-                        letterSpacing: "-.02em",
-                      }}
-                    >
-                      {monthNames[selectedMonth]} {selectedYear}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: ".75rem",
-                        color: "var(--text-3)",
-                        fontWeight: 500,
-                        marginTop: 2,
-                      }}
-                    >
-                      Periode Aktif
-                    </div>
-                  </div>
-
-                  <button
-                    aria-label="goToNextMonth"
-                    onClick={goToNextMonth}
-                    className="dash-btn-ghost"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: ".5rem",
-                  }}
-                >
-                  <select
-                    aria-label="Pilih Bulan"
-                    value={selectedMonth}
-                    onChange={handleMonthChange}
-                    className="dash-select"
-                  >
-                    {monthNames.map((m, i) => (
-                      <option key={i} value={i}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    aria-label="Pilih Tahun"
-                    value={selectedYear}
-                    onChange={handleYearChange}
-                    className="dash-select"
-                  >
-                    {yearOptions.map((y) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={goToCurrentMonth}
-                    className="dash-btn-secondary"
-                    style={{ fontSize: ".8rem" }}
-                  >
-                    Bulan Ini
-                  </button>
-                </div>
-              </div>
-            </div>
-
             {!isDataReady ? (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                  gap: "1rem",
-                  marginBottom: "1.5rem",
-                }}
-              >
+              <div className="stat-grid">
                 {[1, 2, 3, 4].map((i) => (
                   <CardSkeleton key={i} />
                 ))}
               </div>
             ) : (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                  gap: "1rem",
-                  marginBottom: "1.5rem",
-                }}
-              >
+              <div className="stat-grid">
                 {stats.map((item) => (
                   <StatCard key={item.label} {...item} />
                 ))}
@@ -1042,7 +789,7 @@ function Dashboard() {
 
                 <div className="progress-track">
                   <div
-                    className={`progress-fill bg-gradient-to-r ${warningConfig[warningLevel].bar}`}
+                    className={`progress-fill ${warningConfig[warningLevel].bar}`}
                     style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
                   />
                 </div>
@@ -1162,21 +909,9 @@ function Dashboard() {
             </div>
 
             <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: isSidebarCollapsed ? "1fr 1fr" : "1fr",
-                gap: "1.25rem",
-                alignItems: "start",
-              }}
-              className={isSidebarCollapsed ? "xl:grid-cols-2" : ""}
+              className={`work-grid${isSidebarCollapsed ? " work-grid--collapsed" : ""}`}
             >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1.25rem",
-                }}
-              >
+              <div className="work-col">
                 <Suspense fallback={<FormSkeleton />}>
                   {isExpense ? (
                     <ExpenseForm
@@ -1217,13 +952,7 @@ function Dashboard() {
                 </Suspense>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1.25rem",
-                }}
-              >
+              <div className="work-col">
                 <Suspense fallback={<ChartSkeleton />}>
                   <div className="dash-card">
                     <div className="section-label">Grafik Transaksi</div>
